@@ -1,0 +1,11 @@
+schema_version = "1.0.0"
+id = "soap_tools"
+version = "0.0.1"
+name = "SoapTools"
+tagline = "Computational design tools for Blender."
+maintainer = "Thomas Wolfgang Peschlow <thomas.p24@live.com>"
+type = "add-on"
+tags = ["Modeling"]
+wheels = []
+blender_version_min = "4.2.0"
+license = ["SPDX:GPL-3.0-or-later"]

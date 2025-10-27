@@ -1,0 +1,84 @@
+name: Build Blender Add-on
+
+on:
+  push:
+    branches:
+    - "release/*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        blender-version: [ "4.5lts" ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11" # Blender 4.x ships with Python 3.11
+
+    - name: Install dependencies for build and docs
+      run: |
+        python -m pip install --upgrade pip
+        pip install toml wheel
+
+    - name: Install Blender via Snap
+      run: |
+        sudo snap install blender --channel=${{ matrix.blender-version }}/stable --classic
+        BLENDER_PATH="/snap/blender/current/blender"
+        echo "BLENDER_PATH=$BLENDER_PATH" >> $GITHUB_ENV
+        echo "✅ Installed Blender ${{ matrix.blender-version }}"
+
+    - name: Download wheels for all platforms
+      run: |
+        mkdir -p ./src/wheels
+        PLATFORMS=("manylinux" "win32" "win_amd64" "macosx_10_9_x86_64")
+        while read requirement; do
+          if [[ ! -z "$requirement" && ! "$requirement" =~ ^# ]]; then
+            for plat in "${PLATFORMS[@]}"; do
+              echo "Downloading $requirement for $plat..."
+              pip download "$requirement" \
+                --dest ./src/wheels \
+                --only-binary=:all: \
+                --platform "$plat" \
+                --python-version 3.11 \
+                --implementation cp
+            done
+          fi
+        done < requirements.txt
+
+    - name: Add wheels to blender_manifest.toml
+      run: |
+        python - <<'PY'
+        import toml, os
+        mf_path = "./src/blender_manifest.toml"
+        data = toml.load(mf_path)
+        wheel_dir = "./src/wheels"
+        wheel_paths = [
+            os.path.join("./wheels", f) for f in os.listdir(wheel_dir) if f.endswith(".whl")
+        ]
+        data["wheels"] = wheel_paths
+        with open(mf_path, "w") as f:
+            toml.dump(data, f)
+        print("Updated manifest with wheel paths:")
+        for w in wheel_paths:
+            print(" -", w)
+        PY
+
+    - name: Bundle the add-on
+      run: |
+        mkdir -p ./artifact 
+        blender --command extension validate ./src
+        blender --command extension build --source ./src --output-dir ./artifact
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: soaptools-blender-${{ matrix.blender-version }}
+        path: ./*.zip

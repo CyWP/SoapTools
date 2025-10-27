@@ -1,0 +1,28 @@
+name: Publish Docs on Release
+
+on:
+  release:
+    types: [ published ] # Trigger only when a release is published
+
+jobs:
+  publish-docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Allow pushing to gh-pages
+      pages: write
+      id-token: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup GitHub Pages
+      uses: actions/configure-pages@v5
+
+    - name: Upload docs to GitHub Pages
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: docs # Folder containing Markdown files
+
+    - name: Deploy docs
+      uses: actions/deploy-pages@v4
