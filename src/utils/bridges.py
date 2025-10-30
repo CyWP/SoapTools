@@ -86,3 +86,67 @@ def vg2np(mesh: bpy.types.Object, group_name: str) -> Tuple[np.ndarray, np.ndarr
     selected_weights = all_weights[mask]
     nz_mask = selected_weights > 0.0
     return selected_weights[nz_mask], selected_indices[nz_mask]
+
+
+def vn2np(mesh_obj: bpy.types.Object) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Return vertex normals from a Blender mesh as NumPy arrays.
+    Uses the base mesh only (no modifiers).
+    """
+    if mesh_obj.type != "MESH":
+        raise TypeError("Input must be a mesh object")
+
+    mesh = mesh_obj.data
+    # mesh.calc_normals()  # ensure normals are up to date
+    mesh.calc_loop_triangles()
+
+    # Vertex normals
+    N_v = np.array([v.normal for v in mesh.vertices], dtype=np.float32)
+
+    return N_v
+
+
+def fn2np(mesh_obj: bpy.types.Object) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Return face normals from a Blender mesh as NumPy arrays.
+    Uses the base mesh only (no modifiers).
+    """
+    if mesh_obj.type != "MESH":
+        raise TypeError("Input must be a mesh object")
+
+    mesh = mesh_obj.data
+    mesh.calc_normals_split()  # ensure normals are up to date
+    mesh.calc_loop_triangles()
+    # Face (triangle) normals
+    N_f = np.array([tri.normal for tri in mesh.loop_triangles], dtype=np.float32)
+
+    return N_f
+
+
+def e2np(mesh_obj: bpy.types.Object) -> np.ndarray:
+    """
+    Return triangulated mesh edges as a NumPy array of vertex index pairs.
+    Each edge comes from the mesh's triangulated faces.
+    """
+    if mesh_obj.type != "MESH":
+        raise TypeError("Input must be a mesh object")
+
+    mesh = mesh_obj.data
+    mesh.calc_loop_triangles()  # ensure triangulated faces
+
+    # Collect all triangle edges
+    tris = np.array([tri.vertices[:] for tri in mesh.loop_triangles], dtype=np.int32)
+    edges = np.concatenate(
+        [
+            tris[:, [0, 1]],
+            tris[:, [1, 2]],
+            tris[:, [2, 0]],
+        ],
+        axis=0,
+    )
+
+    # Sort each edge and remove duplicates
+    edges = np.sort(edges, axis=1)
+    edges = np.unique(edges, axis=0)
+
+    return edges

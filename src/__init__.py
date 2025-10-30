@@ -1,9 +1,9 @@
 import bpy
 
-from .operators import MESH_OT_MinimalSurface, MESH_OT_HardenVGroup
+from .operators import MESH_OT_MinimalSurface, MESH_OT_HardenVGroup, MESH_OT_Inflation
 
 
-classes = [MESH_OT_MinimalSurface, MESH_OT_HardenVGroup]
+classes = [MESH_OT_MinimalSurface, MESH_OT_HardenVGroup, MESH_OT_Inflation]
 
 
 def register():
