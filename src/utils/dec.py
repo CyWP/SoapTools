@@ -112,3 +112,110 @@ def solve_minimal_surface_with_fixed(V, F, fixed_idx, fixed_pos=None, solver="di
     # fixed vertices get fixed_pos
     V_new[fixed_idx] = fixed_pos
     return V_new
+
+
+def solve_inflation(
+    V,
+    F,
+    N,
+    fixed_idx,
+    target_offset=None,
+    lambda_lap=1.0,
+    alpha_tangent=0.0,
+    beta_normal=1.0,
+    solver="direct",
+):
+    """
+    Solve for vertex displacements that approximately move vertices along their normals
+    toward a target normal offset distance, while regularizing with the Laplacian.
+
+    Parameters
+    ----------
+    V : (n,3) array
+        Original vertex positions.
+    F : (m,3) array
+        Triangle indices.
+    N : (n,3) array
+        Unit vertex normals.
+    fixed_idx : list[int]
+        Indices of fixed vertices (will remain at their original position).
+    target_offset : (n,) or scalar or None
+        Desired signed offset distance along normal direction (n_i).
+        If None, defaults to zero (minimal surface behavior).
+    lambda_lap : float
+        Weight for Laplacian smoothness term.
+    alpha_tangent : float
+        Weight for penalizing tangential motion (discourages deviation from normal direction).
+    beta_normal : float
+        Weight for enforcing target normal offset distance.
+    solver : {'direct','cg'}
+        Linear solver type.
+
+    Returns
+    -------
+    V_new : (n,3) array
+        Updated vertex positions.
+    """
+
+    n = V.shape[0]
+    fixed_idx = np.asarray(fixed_idx, dtype=np.int64)
+    is_fixed = np.zeros(n, dtype=bool)
+    is_fixed[fixed_idx] = True
+    free_idx = np.where(~is_fixed)[0]
+    if len(free_idx) == 0:
+        return V.copy()
+
+    if np.isscalar(target_offset) or target_offset is None:
+        target_offset = np.full(n, target_offset if target_offset is not None else 0.0)
+
+    # Laplacian
+    L = cotangent_laplacian(V, F)
+
+    # Construct system for displacements D (n x 3)
+    I = sp.eye(n, format="csr")
+
+    # Quadratic operator A = λ LᵀL + α (I - P) + β P
+    # where P = nnᵀ per vertex
+    A = lambda_lap * (L.T @ L)
+    if alpha_tangent != 0.0 or beta_normal != 0.0:
+        blocks = []
+        for i in range(n):
+            n_i = N[i]
+            P_i = np.outer(n_i, n_i)
+            Q_i = alpha_tangent * (np.eye(3) - P_i) + beta_normal * P_i
+            blocks.append(Q_i)
+        Q = sp.block_diag(blocks, format="csr")
+    else:
+        Q = sp.csr_matrix((3 * n, 3 * n))
+    # Expand Laplacian to 3D (block-diagonal)
+    L3 = sp.kron(I, sp.eye(3))
+    A3 = sp.kron(A, np.eye(3)) + Q
+
+    # Right-hand side
+    b = np.zeros(3 * n)
+    for i in range(n):
+        n_i = N[i]
+        b_i = beta_normal * target_offset[i] * n_i
+        b[3 * i : 3 * i + 3] = b_i
+
+    # Apply fixed constraints
+    mask = np.ones(3 * n, dtype=bool)
+    for fi in fixed_idx:
+        mask[3 * fi : 3 * fi + 3] = False
+
+    A3_free = A3[mask][:, mask]
+    b_free = b[mask]
+
+    # Solve
+    if solver == "direct":
+        d_free = spla.spsolve(A3_free, b_free)
+    else:
+        d_free, info = spla.cg(A3_free, b_free, atol=1e-10)
+        if info != 0:
+            raise RuntimeError(f"CG did not converge: info={info}")
+
+    # Reassemble displacement vector
+    D = np.zeros((n, 3))
+    D[free_idx] = d_free.reshape(-1, 3)
+    V_new = V + D
+    return V_new
