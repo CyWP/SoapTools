@@ -3,60 +3,36 @@ import scipy.sparse as sp
 import scipy.sparse.linalg as spla
 
 
-def cotangent_laplacian(V, F):
-    """
-    Build the symmetric cotangent Laplacian L and (optionally) the mass diagonal.
-    V: (n,3) vertices
-    F: (m,3) faces (indices)
-    Returns: L (n x n sparse CSR)
-    """
+def cotangent_laplacian(
+    V: np.ndarray, F: np.ndarray, eps: float = 1e-12
+) -> sp.csr_matrix:
+    assert len(F.shape) == 2 and F.shape[1] == 3
     n = V.shape[0]
-    I = []
-    J = []
-    W = []
 
-    def cot(a, b):
-        # cotangent of angle between vectors a and b
-        # cot = a·b / ||a x b||
-        cross = np.cross(a, b)
-        denom = np.linalg.norm(cross, axis=1)
-        # avoid divide-by-zero for degenerate triangles
-        denom = np.where(denom == 0, 1e-12, denom)
-        return np.einsum("ij,ij->i", a, b) / denom
+    i, j, k = F[:, 0], F[:, 1], F[:, 2]
+    vi, vj, vk = V[i], V[j], V[k]
 
-    # For each face add cot weights for its three edges
-    # We'll accumulate entries for symmetric matrix
-    for face in F:
-        i, j, k = face
-        vi, vj, vk = V[i], V[j], V[k]
-        # angles at vertices i, j, k:
-        # for angle at i, use vectors (vj-vi) and (vk-vi)
-        v_ji = vj - vi
-        v_ki = vk - vi
-        v_ij = vi - vj
-        v_kj = vk - vj
-        v_ik = vi - vk
-        v_jk = vj - vk
+    v_ji = vj - vi
+    v_ki = vk - vi
+    v_ij = vi - vj
+    v_kj = vk - vj
+    v_ik = vi - vk
+    v_jk = vj - vk
 
-        # compute cotangents (as scalars)
-        cot_i = np.dot(v_ji, v_ki) / (np.linalg.norm(np.cross(v_ji, v_ki)) + 1e-12)
-        cot_j = np.dot(v_ij, v_kj) / (np.linalg.norm(np.cross(v_ij, v_kj)) + 1e-12)
-        cot_k = np.dot(v_ik, v_jk) / (np.linalg.norm(np.cross(v_ik, v_jk)) + 1e-12)
+    cot_i = (v_ji * v_ki).sum(axis=1) / (
+        np.linalg.norm(np.cross(v_ji, v_ki), axis=1) + eps
+    )
+    cot_j = (v_ij * v_kj).sum(axis=1) / (
+        np.linalg.norm(np.cross(v_ij, v_kj), axis=1) + eps
+    )
+    cot_k = (v_ik * v_jk).sum(axis=1) / (
+        np.linalg.norm(np.cross(v_ik, v_jk), axis=1) + eps
+    )
 
-        # edge (j,k) opposite i gets weight cot_i
-        for a, b, w in [
-            (j, k, cot_i),
-            (k, j, cot_i),
-            (k, i, cot_j),
-            (i, k, cot_j),
-            (i, j, cot_k),
-            (j, i, cot_k),
-        ]:
-            I.append(a)
-            J.append(b)
-            W.append(w * 0.5)  # commonly 1/2 factor
+    W = np.concatenate([cot_i, cot_i, cot_j, cot_j, cot_k, cot_k]) * 0.5
+    I = np.concatenate([j, k, k, i, i, j])
+    J = np.concatenate([k, j, i, k, j, i])
 
-    # assemble sparse matrix and symmetrize (should be symmetric)
     L = sp.coo_matrix((W, (I, J)), shape=(n, n))
     L = (L + L.T) * 0.5  # force symmetry
     # set diagonal L_ii = -sum_{j != i} L_ij
