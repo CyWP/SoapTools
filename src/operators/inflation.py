@@ -1,10 +1,11 @@
 import bpy
-import multiprocessing as mp
+import torch
 
 from ..utils.blend_data import duplicate_mesh_object, link_to_same_scene_collections
-from ..utils.bridges import mesh2np, vg2np, vn2np
-from ..utils.dec import solve_inflation
+from ..utils.bridges import mesh2tensor, vg2tensor, vn2tensor
+from ..utils.jobs import BackgroundJob
 from ..utils.mesh_obj import apply_first_n_modifiers, update_mesh_vertices
+from ..utils.solvers import solve_flation
 
 
 def vertex_group_items(caller, context):
@@ -85,6 +86,8 @@ class MESH_OT_Inflation(bpy.types.Operator):
 
     def draw(self, context):
         layout = self.layout
+        settings = context.scene.soap_settings
+        layout.prop(settings, "device")
         layout.prop(self, "vertex_group")
         layout.prop(self, "modifier")
         layout.prop(self, "preserve")
@@ -95,6 +98,8 @@ class MESH_OT_Inflation(bpy.types.Operator):
 
     def execute(self, context):
         obj = context.active_object
+        settings = context.scene.soap_settings
+        device = torch.device(settings.device)
         vg = self.vertex_group
         mod = self.modifier
         preserve = self.preserve
@@ -104,7 +109,7 @@ class MESH_OT_Inflation(bpy.types.Operator):
         alpha_tangent = self.alpha_tangent
 
         if vg == "NONE":
-            self.report({"ERROR"}, "A vertex group must be selected for constrainst.")
+            self.report({"ERROR"}, "A vertex group must be selected for constraints.")
             return {"CANCELLED"}
         try:
             mod = int(mod)
@@ -120,32 +125,24 @@ class MESH_OT_Inflation(bpy.types.Operator):
             for coll in new_obj.users_collection:
                 coll.objects.unlink(new_obj)
 
-        V, F = mesh2np(new_obj)
-        N = vn2np(new_obj)
+        V, F = mesh2tensor(new_obj, device=device)
+        N = vn2tensor(new_obj, device=device)
 
-        _, idx = vg2np(new_obj, vg)
+        _, idx = vg2tensor(new_obj, vg, device=device)
 
-        # Launch worker process
-        self.q = mp.Queue()
-        self.p = mp.Process(
-            target=lambda V, F, idx, q: q.put(
-                solve_inflation(
-                    V,
-                    F,
-                    N,
-                    idx,
-                    target_offset=displacement,
-                    lambda_lap=lambda_laplacian,
-                    beta_normal=beta_normal,
-                    alpha_tangent=alpha_tangent,
-                )
-            ),
-            args=(V, F, idx, self.q),
-        )
-        self.p.start()
         self.new_obj = new_obj
         self.original_obj = obj
-
+        self._job = BackgroundJob(
+            solve_flation,
+            V,
+            F,
+            N,
+            target_offset=displacement,
+            fixed_idx=idx,
+            lambda_lap=lambda_laplacian,
+            beta_normal=beta_normal,
+            alpha_tangent=alpha_tangent,
+        )
         # Add a timer
         self._timer = context.window_manager.event_timer_add(0.2, window=context.window)
         context.window_manager.modal_handler_add(self)
@@ -153,28 +150,21 @@ class MESH_OT_Inflation(bpy.types.Operator):
         return {"RUNNING_MODAL"}
 
     def modal(self, context, event):
-        if event.type == "TIMER":
-            if not self.q.empty():
-                new_V = self.q.get()
-                update_mesh_vertices(self.new_obj, new_V)
-                link_to_same_scene_collections(self.original_obj, self.new_obj)
-                self.p.join(timeout=1)
-                context.window_manager.event_timer_remove(self._timer)
-                self.report({"INFO"}, "Minimal surface computation complete.")
-                try:
-                    bpy.ops.object.select_all(action="DESELECT")
-                    self.new_obj.select_set(True)
-                except RuntimeError:
-                    pass
-                context.view_layer.objects.active = self.new_obj
-                return {"FINISHED"}
+        if event.type == "TIMER" and self._job.is_done():
+            new_V = self._job.get_result()
+            update_mesh_vertices(self.new_obj, new_V.cpu().numpy())
+            link_to_same_scene_collections(self.original_obj, self.new_obj)
+            context.window_manager.event_timer_remove(self._timer)
+            self._timer = None
+            self._result = None
+            self.report({"INFO"}, "Inflation complete")
+            self.new_obj.select_set(True)
+            context.view_layer.objects.active = self.new_obj
+            return {"FINISHED"}
         return {"PASS_THROUGH"}
 
     def cancel(self, context):
-        try:
-            self.p.terminate()
-        except Exception:
-            pass
+        self._job = None
         context.window_manager.event_timer_remove(self._timer)
         self.report({"INFO"}, "Minimal surface computation canceled.")
         return {"CANCELLED"}

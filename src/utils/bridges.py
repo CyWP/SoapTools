@@ -1,5 +1,6 @@
 import bpy
 import numpy as np
+import torch
 
 from itertools import chain
 from typing import Tuple
@@ -28,7 +29,13 @@ def np2mesh(context, V: np.ndarray, F: np.ndarray, name: str) -> bpy.types.Objec
     return obj
 
 
-def mesh2np(mesh_obj: bpy.types.Object) -> tuple[np.ndarray, np.ndarray]:
+def tensor2mesh(
+    context, V: torch.Tensor, F: torch.Tensor, name: str
+) -> bpy.types.Object:
+    return np2mesh(context, V.cpu().numpy(), F.cpu().numpy(), name)
+
+
+def mesh2np(mesh_obj: bpy.types.Object) -> Tuple[np.ndarray, np.ndarray]:
     """
     Convert a Blender mesh object to numpy arrays of vertices and triangulated faces.
     Uses the base mesh only (no modifiers) and is fully vectorized.
@@ -45,28 +52,39 @@ def mesh2np(mesh_obj: bpy.types.Object) -> tuple[np.ndarray, np.ndarray]:
     return V, F
 
 
-def vg2np(mesh: bpy.types.Object, group_name: str) -> Tuple[np.ndarray, np.ndarray]:
-    if mesh.type != "MESH":
+def mesh2tensor(
+    mesh_obj: bpy.types.Object, device: torch.device, dtype: torch.dtype = torch.float32
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    V, F = mesh2np(mesh_obj)
+    return torch.tensor(V, device=device, dtype=dtype), torch.tensor(
+        F, device=device, dtype=torch.long
+    )
+
+
+def vg2np(mesh_obj: bpy.types.Object, group_name: str) -> Tuple[np.ndarray, np.ndarray]:
+    if mesh_obj.type != "MESH":
         raise ValueError("Object must be a mesh.")
 
-    vg = mesh.vertex_groups.get(group_name)
+    vg = mesh_obj.vertex_groups.get(group_name)
     if vg is None:
         raise ValueError(f"Vertex group '{group_name}' not found.")
 
     group_idx = vg.index
-    n_verts = len(mesh.data.vertices)
+    n_verts = len(mesh_obj.data.vertices)
 
     # Flatten all vertex groups info into numpy arrays
     all_vertex_indices = np.array(
         list(
-            chain.from_iterable([[v.index] * len(v.groups) for v in mesh.data.vertices])
+            chain.from_iterable(
+                [[v.index] * len(v.groups) for v in mesh_obj.data.vertices]
+            )
         ),
         dtype=np.int32,
     )
     all_group_indices = np.array(
         list(
             chain.from_iterable(
-                [[g.group for g in v.groups] for v in mesh.data.vertices]
+                [[g.group for g in v.groups] for v in mesh_obj.data.vertices]
             )
         ),
         dtype=np.int32,
@@ -74,7 +92,7 @@ def vg2np(mesh: bpy.types.Object, group_name: str) -> Tuple[np.ndarray, np.ndarr
     all_weights = np.array(
         list(
             chain.from_iterable(
-                [[g.weight for g in v.groups] for v in mesh.data.vertices]
+                [[g.weight for g in v.groups] for v in mesh_obj.data.vertices]
             )
         ),
         dtype=np.float32,
@@ -88,25 +106,39 @@ def vg2np(mesh: bpy.types.Object, group_name: str) -> Tuple[np.ndarray, np.ndarr
     return selected_weights[nz_mask], selected_indices[nz_mask]
 
 
-def vn2np(mesh_obj: bpy.types.Object) -> tuple[np.ndarray, np.ndarray]:
+def vg2tensor(
+    mesh_obj: bpy.types.Object,
+    group_name: str,
+    device: torch.device,
+    dtype: torch.dtype = torch.float32,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    W, idx = vg2np(mesh_obj, group_name)
+    return torch.tensor(W, device=device, dtype=dtype), torch.tensor(
+        idx, device=device, dtype=torch.long
+    )
+
+
+def vn2np(mesh_obj: bpy.types.Object) -> Tuple[np.ndarray, np.ndarray]:
     """
     Return vertex normals from a Blender mesh as NumPy arrays.
     Uses the base mesh only (no modifiers).
     """
     if mesh_obj.type != "MESH":
         raise TypeError("Input must be a mesh object")
-
     mesh = mesh_obj.data
-    # mesh.calc_normals()  # ensure normals are up to date
     mesh.calc_loop_triangles()
-
     # Vertex normals
     N_v = np.array([v.normal for v in mesh.vertices], dtype=np.float32)
-
     return N_v
 
 
-def fn2np(mesh_obj: bpy.types.Object) -> tuple[np.ndarray, np.ndarray]:
+def vn2tensor(
+    mesh_obj: bpy.types.Object, device: torch.device, dtype: torch.dtype = torch.float32
+) -> torch.Tensor:
+    return torch.tensor(vn2np(mesh_obj), device=device, dtype=dtype)
+
+
+def fn2np(mesh_obj: bpy.types.Object) -> torch.Tensor:
     """
     Return face normals from a Blender mesh as NumPy arrays.
     Uses the base mesh only (no modifiers).
@@ -121,6 +153,12 @@ def fn2np(mesh_obj: bpy.types.Object) -> tuple[np.ndarray, np.ndarray]:
     N_f = np.array([tri.normal for tri in mesh.loop_triangles], dtype=np.float32)
 
     return N_f
+
+
+def fn2tensor(
+    mesh_obj: bpy.types.Object, device: torch.device, dtype: torch.dtype = torch.float32
+) -> torch.Tensor:
+    return torch.tensor(fn2np(mesh_obj), device=device, dtype=dtype)
 
 
 def e2np(mesh_obj: bpy.types.Object) -> np.ndarray:
@@ -150,3 +188,9 @@ def e2np(mesh_obj: bpy.types.Object) -> np.ndarray:
     edges = np.unique(edges, axis=0)
 
     return edges
+
+
+def e2tensor(
+    mesh_obj: bpy.types.Object, device: torch.device, dtype: torch.dtype = torch.float32
+) -> torch.Tensor:
+    return torch.tensor(e2np(mesh_obj), device=device, dtype=dtype)
