@@ -8,18 +8,43 @@ from typing import Union, Optional
 from .sparse_mats import sparse_cotan_laplacian, sparse_eye, sparse_kron, sparse_mask
 
 
+def conjugate_gradient(
+    A: torch.Tensor, b: torch.Tensor, tol: float = 1e-8, max_iter: int = 500
+) -> torch.Tensor:
+    """
+    Solve Ax = b using Conjugate Gradient (CG) method.
+    Works for symmetric positive definite (SPD) sparse matrices.
+    Supports CUDA and CPU.
+    """
+    x = torch.zeros_like(b)
+    # r = b - torch.sparse.mm(A, x.unsqueeze(1)).squeeze(1)
+    r = b - (A @ x.unsqueeze(1)).squeeze(1)
+    p = r.clone()
+    rs_old = torch.dot(r, r)
+
+    for _ in range(max_iter):
+        # Ap = torch.sparse.mm(A, p.unsqueeze(1)).squeeze(1)
+        Ap = (A @ p.unsqueeze(1)).squeeze(1)
+        alpha = rs_old / torch.dot(p, Ap)
+        x += alpha * p
+        r -= alpha * Ap
+        rs_new = torch.dot(r, r)
+        if torch.sqrt(rs_new) < tol:
+            break
+        p = r + (rs_new / rs_old) * p
+        rs_old = rs_new
+
+    return x
+
+
 def sparse_solve(A: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     """
     Solve Ax = b for sparse A.
-    Works on CPU (SciPy) and GPU (torch.sparse.spsolve with CUDA).
     """
     device = b.device
 
     if device.type == "cuda":
-        # CUDA path using PyTorch sparse solver
-        if not A.is_sparse:
-            raise ValueError("A must be sparse for torch.sparse.spsolve on GPU")
-        x = torch.sparse.spsolve(A, b)
+        x = conjugate_gradient(A, b)
         return x
     else:
         if A.layout == torch.sparse_coo:
@@ -62,22 +87,18 @@ def solve_minimal_surface(
     if len(free_idx) == 0:
         return V.clone()
 
-    # Partition matrices
-    # L_II = L[free_idx[:, None], free_idx]
-    # L_IB = L[free_idx[:, None], fixed_idx]
-
     L_II = sparse_mask(L, not_fixed, not_fixed)
     L_IB = sparse_mask(L, not_fixed, is_fixed)
 
     X_B = fixed_pos
     rhs = torch.sparse.mm(-L_IB, X_B)
 
-    V_new = V.cpu()
+    V_new = V
     for dim in range(3):
         b = rhs[:, dim]
-        x_free = sparse_solve(L_II.cpu(), b.cpu())
+        x_free = sparse_solve(L_II.to_sparse_csr(), b)
         V_new[free_idx, dim] = x_free
-    V_new[fixed_idx] = fixed_pos.cpu()
+    V_new[fixed_idx] = fixed_pos
 
     return V_new
 
@@ -93,7 +114,7 @@ def solve_flation(
     alpha_tangent: Union[float, torch.Tensor] = 0.0,
 ) -> torch.Tensor:
     """
-    Sparse solve of vertex inflation along normals with Laplacian smoothing.
+    Sparse solve of vertex displacement along normals with Laplacian smoothing constraints.
     """
     n = V.shape[0]
     device = V.device
@@ -162,8 +183,8 @@ def solve_flation(
     A3_free = sparse_mask(A3.coalesce(), mask, mask)
     b_free = b[mask]
     # Solve sparse system
-    d_free = sparse_solve(A3_free.to_sparse_csr().cpu(), b_free.cpu())
+    d_free = sparse_solve(A3_free.to_sparse_csr(), b_free)
     # Reassemble displacement
-    D = torch.zeros_like(V).cpu()
+    D = torch.zeros_like(V)
     D[free_idx] = d_free.view(-1, 3)
-    return V.to(D.device) + D
+    return V + D

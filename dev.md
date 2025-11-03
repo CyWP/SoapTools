@@ -5,8 +5,10 @@
 
 ## Features to add
 - "Boundary selection" operator
-- Volume-based deformation with constraints
-- MinSrf geometry node
+- Geometry nodes
 - SoapTools menu with key bindings
 - Soften vertex group
 - Assign vertex group weights to penalties
+- Advanced settings
+- Solver settings
+- Solve steps as parameter

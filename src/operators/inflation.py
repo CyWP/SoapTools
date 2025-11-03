@@ -158,7 +158,12 @@ class MESH_OT_Inflation(bpy.types.Operator):
             self._timer = None
             self._result = None
             self.report({"INFO"}, "Inflation complete")
-            self.new_obj.select_set(True)
+            try:
+                bpy.ops.object.select_all(action="DESELECT")
+            except RuntimeError:
+                pass
+            finally:
+                self.new_obj.select_set(True)
             context.view_layer.objects.active = self.new_obj
             return {"FINISHED"}
         return {"PASS_THROUGH"}
