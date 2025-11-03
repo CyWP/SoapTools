@@ -5,7 +5,7 @@ from scipy.sparse import csr_matrix
 
 from typing import Union, Optional
 
-from .sparse_mats import sparse_cotan_laplacian, sparse_eye, sparse_kron, sparse_mask
+from .sparse_ops import sparse_cotan_laplacian, sparse_eye, sparse_kron, sparse_mask
 
 
 def conjugate_gradient(

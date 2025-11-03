@@ -9,6 +9,6 @@
 - SoapTools menu with key bindings
 - Soften vertex group
 - Assign vertex group weights to penalties
-- Advanced settings
 - Solver settings
 - Solve steps as parameter
+- Strict vertex groups torch implementation

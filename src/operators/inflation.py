@@ -2,9 +2,9 @@ import bpy
 import torch
 
 from ..utils.blend_data import duplicate_mesh_object, link_to_same_scene_collections
-from ..utils.bridges import mesh2tensor, vg2tensor, vn2tensor
+from ..utils.blend_data.bridges import mesh2tensor, vg2tensor, vn2tensor
 from ..utils.jobs import BackgroundJob
-from ..utils.mesh_obj import apply_first_n_modifiers, update_mesh_vertices
+from ..utils.blend_data.mesh_obj import apply_first_n_modifiers, update_mesh_vertices
 from ..utils.solvers import solve_flation
 
 
