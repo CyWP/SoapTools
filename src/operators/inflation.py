@@ -1,18 +1,14 @@
 import bpy
 import torch
 
-from ..utils.blend_data import duplicate_mesh_object, link_to_same_scene_collections
+from ..utils.blend_data.data_ops import (
+    duplicate_mesh_object,
+    link_to_same_scene_collections,
+)
 from ..utils.blend_data.bridges import mesh2tensor, vg2tensor, vn2tensor
 from ..utils.jobs import BackgroundJob
 from ..utils.blend_data.mesh_obj import apply_first_n_modifiers, update_mesh_vertices
-from ..utils.solvers import solve_flation
-
-
-def vertex_group_items(caller, context):
-    obj = context.active_object
-    if obj and obj.type == "MESH" and obj.vertex_groups:
-        return [(vg.name, vg.name, "") for vg in obj.vertex_groups]
-    return [("NONE", "None", "")]
+from ..utils.math.solvers import solve_flation
 
 
 def modifier_items(caller, context):

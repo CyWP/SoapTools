@@ -1,6 +1,6 @@
 import bpy
 
-from ..utils.vertex_groups import (
+from ..utils.blend_data.vertex_groups import (
     harden_vertex_group,
     get_vertex_group_copy,
     vertex_group_items,

@@ -1,11 +1,14 @@
 import bpy
 import torch
 
-from ..utils.blend_data import duplicate_mesh_object, link_to_same_scene_collections
-from ..utils.bridges import mesh2tensor, vg2tensor
+from ..utils.blend_data.data_ops import (
+    duplicate_mesh_object,
+    link_to_same_scene_collections,
+)
+from ..utils.blend_data.bridges import mesh2tensor, vg2tensor
 from ..utils.jobs import BackgroundJob
-from ..utils.mesh_obj import apply_first_n_modifiers, update_mesh_vertices
-from ..utils.solvers import solve_minimal_surface
+from ..utils.blend_data.mesh_obj import apply_first_n_modifiers, update_mesh_vertices
+from ..utils.math.solvers import solve_minimal_surface
 
 
 def vertex_group_items(caller, context):

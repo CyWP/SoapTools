@@ -8,7 +8,7 @@ def remap_linear(x: torch.Tensor) -> torch.Tensor:
 def remap_fill(x: torch.Tensor) -> torch.Tensor:
     x_max = x.max()
     x_min = x.min()
-    return x / (x_max - x_min) - x_min
+    return (x - x_min) / (x_max - x_min)
 
 
 def remap_smooth(x: torch.Tensor) -> torch.Tensor:
