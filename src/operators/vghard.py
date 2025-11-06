@@ -39,8 +39,12 @@ class MESH_OT_HardenVGroup(bpy.types.Operator):
 
     def draw(self, context):
         layout = self.layout
-        layout.prop(self, "vertex_group")
-        layout.prop(self, "copy")
+        box = layout.box()
+        row = box.row()
+        left = row.split(factor=0.8)
+        left.prop(self, "vertex_group", text="")
+        right = left.row()
+        right.prop(self, "copy", text="Copy")
 
     def execute(self, context):
         obj = context.active_object

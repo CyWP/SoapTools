@@ -1,6 +1,8 @@
 import bpy
 import torch
 
+from bpy.types import Context
+
 from ..utils.blend_data.data_ops import (
     duplicate_mesh_object,
     link_to_same_scene_collections,
@@ -9,21 +11,6 @@ from ..utils.blend_data.bridges import mesh2tensor, vg2tensor
 from ..utils.jobs import BackgroundJob
 from ..utils.blend_data.mesh_obj import apply_first_n_modifiers, update_mesh_vertices
 from ..utils.math.solvers import solve_minimal_surface
-
-
-def vertex_group_items(caller, context):
-    obj = context.active_object
-    if obj and obj.type == "MESH" and obj.vertex_groups:
-        return [(vg.name, vg.name, "") for vg in obj.vertex_groups]
-    return [("NONE", "None", "")]
-
-
-def modifier_items(caller, context):
-    obj = context.active_object
-    opts = []
-    if obj and obj.type == "MESH" and obj.modifiers:
-        opts = [(str(i + 1), mod.name, "") for i, mod in enumerate(obj.modifiers)]
-    return [("0", "None", ""), *opts]
 
 
 class MESH_OT_MinimalSurface(bpy.types.Operator):
@@ -35,24 +22,6 @@ class MESH_OT_MinimalSurface(bpy.types.Operator):
 
     suffix: str = "_soaped"
 
-    vertex_group: bpy.props.EnumProperty(
-        name="Pinned Vertices",
-        items=vertex_group_items,  # type: ignore
-        default=0,
-    )
-
-    modifier: bpy.props.EnumProperty(
-        name="Apply After",
-        items=modifier_items,  # type: ignore
-        default=0,
-    )
-
-    preserve: bpy.props.BoolProperty(
-        name="Harden Vertex group",
-        description="Avoids vertex group weights to smooth and propagate after a subdivision pass.",
-        default=True,  # type: ignore
-    )
-
     @classmethod
     def poll(cls, context):
         return True
@@ -63,36 +32,41 @@ class MESH_OT_MinimalSurface(bpy.types.Operator):
             return {"CANCELLED"}
         return context.window_manager.invoke_props_dialog(self)
 
-    def draw(self, context):
+    def draw(self, context: Context):
         layout = self.layout
-        settings = context.scene.soap_settings
-        layout.prop(settings, "device")
-        layout.prop(self, "vertex_group")
-        layout.prop(self, "modifier")
-        layout.prop(self, "preserve")
+        g_set = context.scene.soap_settings
+        op_set = context.scene.soap_minsrf_settings
+
+        row = layout.row()
+        row.prop(g_set, "device", expand=True)
+        box = layout.box()
+        row = box.row()
+        row.prop(op_set, "apply_after")
+        row = box.row()
+        left = row.split(factor=0.8)
+        left.prop(op_set.fixed_verts, "group", text="Pinned")
+        right = left.row()
+        right.prop(op_set.fixed_verts, "strict")
 
     def execute(self, context):
         obj = context.active_object
-        settings = context.scene.soap_settings
-        device = torch.device(settings.device)
-        vg = self.vertex_group
-        mod = self.modifier
-        preserve = self.preserve
+        g_set = context.scene.soap_settings
+        op_set = context.scene.soap_minsrf_settings
+        device = g_set.get_device()
+        vg = op_set.fixed_verts.group
+        apply_after = int(op_set.apply_after)
+        strict_vgs = [vg] if op_set.fixed_verts.strict else []
 
         if vg == "NONE":
             self.report({"ERROR"}, "A vertex group must be selected for constrainst.")
             return {"CANCELLED"}
-        try:
-            mod = int(mod)
-        except:
-            mod = 0
 
         new_obj = duplicate_mesh_object(obj, deep=True)
         new_obj.name = f"{new_obj.name}{MESH_OT_MinimalSurface.suffix}"
         new_obj.data.name = f"{new_obj.data.name}{MESH_OT_MinimalSurface.suffix}"
-        if mod > 0:
+        if apply_after > 0:
             link_to_same_scene_collections(obj, new_obj)
-            apply_first_n_modifiers(new_obj, mod, vg, preserve_vg=preserve)
+            apply_first_n_modifiers(new_obj, apply_after, strict_vgs)
             for coll in new_obj.users_collection:
                 coll.objects.unlink(new_obj)
 

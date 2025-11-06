@@ -1,4 +1,4 @@
-from .settings import GlobalSettings
+from .settings import GlobalSettings, MinSrfSettings, FlationSettings
 from .svm import (
     ScalarVertexMapSettings,
     RemappingMode,
@@ -7,3 +7,4 @@ from .svm import (
     REMAP_OT_AddModeOperator,
     REMAP_OT_RemoveModeOperator,
 )
+from .v_group import SimpleVertexGroup

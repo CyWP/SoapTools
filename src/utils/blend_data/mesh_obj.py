@@ -1,15 +1,19 @@
 import bpy
 import numpy as np
 
+from typing import List
+
 from .vertex_groups import harden_vertex_group
 
 
 def apply_first_n_modifiers(
-    obj: bpy.types.Object, n: int, vertex_group: str, preserve_vg: bool = False
+    obj: bpy.types.Object,
+    n: int,
+    strict_vgs: List[str] = None,
 ):
     """
     Apply the first n modifiers of a mesh object directly.
-    If strict=True, Subdivision Surface modifiers are applied using a
+    strict_vgs keep their initial sharpness using a
     custom 'strict' subdivision that preserves vertex groups on original vertices only.
     """
     if obj.type != "MESH":
@@ -24,13 +28,22 @@ def apply_first_n_modifiers(
             try:
                 is_subsurf = mod.type == "SUBSURF"
                 bpy.ops.object.modifier_apply(modifier=mod.name)
-                if preserve_vg and is_subsurf:
-                    harden_vertex_group(obj, vertex_group)
+                if is_subsurf:
+                    for vg in strict_vgs:
+                        harden_vertex_group(obj, vg)
             except RuntimeError as e:
                 print(f"Failed to apply modifier {mod.name}: {e}")
     finally:
         # Restore previous active object
         bpy.context.view_layer.objects.active = prev_active
+
+
+def modifier_items(caller, context):
+    obj = context.active_object
+    if obj and obj.type == "MESH" and obj.modifiers:
+        data = [(str(i + 1), mod.name, "") for i, mod in enumerate(obj.modifiers)]
+        return [("0", "None", ""), *data]
+    return [("0", "Modifier", "")]
 
 
 def update_mesh_vertices(obj: bpy.types.Object, V: np.ndarray):

@@ -5,6 +5,10 @@ def remap_linear(x: torch.Tensor) -> torch.Tensor:
     return x
 
 
+def remap_invert(x: torch.Tensor) -> torch.Tensor:
+    return 1 - x
+
+
 def remap_fill(x: torch.Tensor) -> torch.Tensor:
     x_max = x.max()
     x_min = x.min()
@@ -22,7 +26,7 @@ def remap_threshold(x: torch.Tensor, threshold: float) -> torch.Tensor:
 
 
 def remap_gaussian(x: torch.Tensor, mu: float, sigma: float) -> torch.Tensor:
-    return torch.exp((-0.25(x - mu) / sigma) ** 2)
+    return torch.exp((-0.25 * (x - mu) / sigma) ** 2)
 
 
 def remap_sine(x: torch.Tensor, period: float, phase: float) -> torch.tensor:

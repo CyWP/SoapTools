@@ -1,9 +1,14 @@
 import bpy
 
+from bpy.props import PointerProperty
+
 from .operators import MESH_OT_MinimalSurface, MESH_OT_HardenVGroup, MESH_OT_Inflation
 from .properties import (
     GlobalSettings,
+    MinSrfSettings,
+    FlationSettings,
     ScalarVertexMapSettings,
+    SimpleVertexGroup,
     RemappingMode,
     RemappingStack,
     REMAP_UL_ModeList,
@@ -16,13 +21,16 @@ classes = [
     MESH_OT_MinimalSurface,
     MESH_OT_HardenVGroup,
     MESH_OT_Inflation,
-    GlobalSettings,
-    ScalarVertexMapSettings,
     RemappingMode,
     RemappingStack,
+    ScalarVertexMapSettings,
+    SimpleVertexGroup,
     REMAP_UL_ModeList,
     REMAP_OT_RemoveModeOperator,
     REMAP_OT_AddModeOperator,
+    GlobalSettings,
+    MinSrfSettings,
+    FlationSettings,
 ]
 
 
@@ -33,21 +41,20 @@ def register():
         except ValueError:
             bpy.utils.unregister_class(cls)
             bpy.utils.register_class(cls)
-    bpy.types.Scene.soap_settings = bpy.props.PointerProperty(type=GlobalSettings)
-    #
-    bpy.types.Scene.soap_inflate_disp_map = bpy.props.PointerProperty(
-        type=ScalarVertexMapSettings
-    )
+    bpy.types.Scene.soap_settings = PointerProperty(type=GlobalSettings)
+    bpy.types.Scene.soap_minsrf_settings = PointerProperty(type=MinSrfSettings)
+    bpy.types.Scene.soap_flation_settings = PointerProperty(type=FlationSettings)
 
 
 def unregister():
+    del bpy.types.Scene.soap_settings
+    del bpy.types.Scene.soap_minsrf_settings
+    del bpy.types.Scene.soap_flation_settings
     for cls in reversed(classes):
         try:
             bpy.utils.unregister_class(cls)
         except RuntimeError:
             pass
-    del bpy.types.Scene.soap_settings
-    del bpy.types.Scene.soap_inflate_disp_map
 
 
 if __name__ == "__main__":

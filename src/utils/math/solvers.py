@@ -107,11 +107,11 @@ def solve_flation(
     V: torch.Tensor,
     F: torch.Tensor,
     N: torch.Tensor,
-    target_offset: Union[float, torch.Tensor],
-    fixed_idx: Optional[torch.Tensor] = None,
-    lambda_lap: Union[float, torch.Tensor] = 1.0,
-    beta_normal: Union[float, torch.Tensor] = 1.0,
-    alpha_tangent: Union[float, torch.Tensor] = 0.0,
+    target_offset: torch.Tensor,
+    fixed_idx: torch.Tensor,
+    lambda_lap: torch.Tensor,
+    beta_normal: torch.Tensor,
+    alpha_tangent: torch.Tensor,
 ) -> torch.Tensor:
     """
     Sparse solve of vertex displacement along normals with Laplacian smoothing constraints.
@@ -119,8 +119,7 @@ def solve_flation(
     n = V.shape[0]
     device = V.device
 
-    if fixed_idx is None:
-        fixed_idx = torch.tensor([], dtype=torch.long, device=device)
+    assert fixed_idx.ndim == 1 and fixed_idx.dtype == torch.long
 
     is_fixed = torch.zeros(n, dtype=torch.bool, device=device)
     is_fixed[fixed_idx] = True
@@ -129,14 +128,10 @@ def solve_flation(
     if len(free_idx) == 0:
         return V
 
-    if isinstance(target_offset, float) or target_offset.ndim == 0:
-        target_offset = torch.full((n,), target_offset, device=device, dtype=V.dtype)
-    if isinstance(lambda_lap, float) or lambda_lap.ndim == 0:
-        lambda_lap = torch.full((n,), lambda_lap, device=device, dtype=V.dtype)
-    if isinstance(alpha_tangent, float) or alpha_tangent.ndim == 0:
-        alpha_tangent = torch.full((n,), alpha_tangent, device=device, dtype=V.dtype)
-    if isinstance(beta_normal, float) or beta_normal.ndim == 0:
-        beta_normal = torch.full((n,), beta_normal, device=device, dtype=V.dtype)
+    assert target_offset.shape == (n,), target_offset.shape
+    assert lambda_lap.shape == (n,), lambda_lap.shape
+    assert alpha_tangent.shape == (n,), alpha_tangent.shape
+    assert beta_normal.shape == (n,), beta_normal.shape
 
     L = sparse_cotan_laplacian(V, F)  # sparse CSR (n x n)
     L2 = torch.sparse.mm(L.transpose(0, 1), L)

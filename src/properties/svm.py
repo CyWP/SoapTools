@@ -9,13 +9,14 @@ from bpy.props import (
     CollectionProperty,
     PointerProperty,
 )
-from bpy.types import PropertyGroup, UIList, Operator
+from bpy.types import PropertyGroup, UIList, Operator, Object
 from typing import Optional
 
 from ..utils.blend_data.bridges import vg2tensor
 from ..utils.blend_data.vertex_groups import vertex_group_items, harden_vertex_group
 from ..utils.math.remap import (
     remap_linear,
+    remap_invert,
     remap_fill,
     remap_gaussian,
     remap_pulse,
@@ -27,59 +28,9 @@ from ..utils.math.remap import (
 )
 
 
-class ScalarVertexMapSettings(PropertyGroup):
-
-    mode: EnumProperty(
-        name="Mode",
-        items=[("BASIC", "Basic", ""), ("ADVANCED", "Advanced", "")],
-        default=0,
-    )  # type:ignore
-    group: EnumProperty(
-        name="Vertex group",
-        items=vertex_group_items,
-        default=0,
-    )  # type: ignore
-    strict: BoolProperty(
-        name="Strict",
-        description="Avoids vertex group weights to smooth and propagate after a subdivision pass.",
-        default=True,
-    )  # type: ignore
-    invert: BoolProperty(
-        name="Invert",
-        description="Invert values from vertex group in 0-1 range.",
-        default=False,
-    )  # type: ignore
-    remap_stack: PointerProperty(type=RemappingStack)  # type: ignore
-
-    def get_map(
-        self, context, range_0: float, range_1: float, device: torch.device
-    ) -> Optional[torch.Tensor]:
-        if self.group == "NONE":
-            return
-        obj = context.active_object
-        if self.strict:
-            harden_vertex_group(obj, self.group)
-        field = vg2tensor(obj, self.group, device=device)
-        if self.invert:
-            field = 1 - field
-        if self.mode == "BASIC":
-            return range_1 * field
-        field = self.remap_stack.process(field)
-        return (range_1 - range_0) * field + range_0
-
-    def draw(self, layout):
-        layout.prop(self, "mode", expand=True)
-        mode = self.mode
-        row = layout.row()
-        row.prop(self, "group")
-        row.prop(self, "strict")
-        row.prop(self, "invert")
-        if mode == "ADVANCED":
-            self.remap_stack.draw(layout)
-
-
 MAPPINGS = [
     ("LINEAR", "Linear", "x' = x"),
+    ("INVERT", "Invert", "x' = 1-x"),
     ("FILL", "Fill", "x' = (x-x_min)/(x_max-x_min)"),
     ("SMOOTH", "Smooth", "x' = 3x^2-2x^3"),
     ("THRESHOLD", "Threshold", "x' = ceil(x-$threshold)"),
@@ -113,7 +64,7 @@ class RemappingMode(PropertyGroup):
     mean: FloatProperty(
         name="mean",
         description="mean of function.",
-        default=1.0,
+        default=0.5,
         min=0,
     )  # type:ignore
     variance: FloatProperty(
@@ -137,10 +88,10 @@ class RemappingMode(PropertyGroup):
     )  # type: ignore
 
     def draw(self, layout):
-        line = layout.row()
+        line = layout.row(align=True)
         map_type = self.map_type
-        line.prop(self, "map_type")
-        if map_type in ("LINEAR", "SMOOTH", "FILL"):
+        line.prop(self, "map_type", text="")
+        if map_type in ("LINEAR", "SMOOTH", "FILL", "INVERT"):
             pass
         elif map_type == "THRESHOLD":
             line.prop(self, "threshold")
@@ -160,6 +111,8 @@ class RemappingMode(PropertyGroup):
         map_type = self.map_type
         if map_type == "LINEAR":
             return remap_linear(x)
+        if map_type == "INVERT":
+            return remap_invert(x)
         if map_type == "FILL":
             return remap_fill(x)
         if map_type == "SMOOTH":
@@ -184,12 +137,15 @@ class RemappingStack(PropertyGroup):
     active_index: IntProperty(default=0)  # type:ignore
 
     def draw(self, layout):
-        layout.template_list(
-            "REMAP_UL_ModeList", "", self, "modes", self, "active_index", rows=4
-        )
-        layout.operator("soap.add_mode_operator", text="Add Remap").collection_ptr = (
-            self
-        )
+        if len(self.modes) > 0:
+            layout.template_list(
+                "REMAP_UL_ModeList", "", self, "modes", self, "active_index", rows=5
+            )
+            op = layout.operator("soap.add_mode_operator", text="", icon="PLUS")
+            op.data_path = self.modes.path_from_id()
+        else:
+            op = layout.operator("soap.add_mode_operator", text="Remap")
+            op.data_path = self.modes.path_from_id()
 
     def process(self, x: torch.Tensor):
         for mode in self.modes:
@@ -203,22 +159,22 @@ class REMAP_UL_ModeList(UIList):
     ):
         if item:
             row = item.draw(layout)
-            op = row.operator(
-                "soap.remove_mode_operator", text="", icon="X", emboss=False
-            )
-            op.collection_ptr = data
+            op = row.operator("soap.remove_mode_operator", text="", icon="TRASH")
+            op.data_path = data.path_from_id()  # string path to the PropertyGroup
             op.idx = index
 
 
 class REMAP_OT_AddModeOperator(Operator):
     bl_idname = "soap.add_mode_operator"
     bl_label = "Add Mode"
+    bl_description = "Add remapping function to the vertex groups values [0, 1] before applying range or weights."
     bl_options = {"INTERNAL"}
 
-    collection_ptr: PointerProperty(type=RemappingStack)  # type:ignore
+    data_path: bpy.props.StringProperty()  # type: ignore
 
     def execute(self, context):
-        self.collection_ptr.modes.add()
+        target = eval(f"context.scene.{self.data_path}")
+        target.add()
         return {"FINISHED"}
 
 
@@ -227,11 +183,88 @@ class REMAP_OT_RemoveModeOperator(Operator):
     bl_label = "Remove Mode"
     bl_options = {"INTERNAL"}
 
-    collection_ptr: PointerProperty(type=RemappingStack)  # type: ignore
-    idx: IntProperty()  # type:ignore
+    data_path: bpy.props.StringProperty()  # type: ignore
+    idx: IntProperty()  # type: ignore
 
     def execute(self, context):
-        coll = self.collection_ptr
-        if 0 <= self.idx < len(coll.modes):
-            coll.modes.remove(self.idx)
+        target = eval(f"context.scene.{self.data_path}")  # resolve the PropertyGroup
+        if 0 <= self.idx < len(target.modes):
+            target.modes.remove(self.idx)
         return {"FINISHED"}
+
+
+class ScalarVertexMapSettings(PropertyGroup):
+
+    val_mode: EnumProperty(
+        name="Value",
+        items=[
+            ("VALUE", "Value", ""),
+            ("RANGE", "Range", ""),
+        ],
+        default="VALUE",
+    )  # type:ignore
+    val: FloatProperty(name="", description="Value", default=1)  # type:ignore
+    r_0: FloatProperty(
+        name="", description="Start of mapping range", default=0
+    )  # type:ignore
+    r_1: FloatProperty(
+        name="", description="End of mapping range", default=1
+    )  # type:ignore
+    group: EnumProperty(
+        name="Vertex group",
+        items=vertex_group_items,
+        default=0,
+    )  # type: ignore
+    strict: BoolProperty(
+        name="Strict",
+        description="Prevents vertex group weights from smoothing and propagating after a subdivision pass.",
+        default=False,
+    )  # type: ignore
+    remap_stack: PointerProperty(type=RemappingStack)  # type: ignore
+
+    def get_field(self, obj: Object, device: torch.device) -> Optional[torch.Tensor]:
+        nV = len(obj.data.vertices)
+        use_range = self.val_mode == "RANGE"
+        if self.strict and self.group != "NONE":
+            harden_vertex_group(obj, self.group)
+        field, idx = (
+            vg2tensor(obj, self.group, device=device)
+            if self.group != "NONE"
+            else (
+                torch.ones((nV,), device=device),
+                None,
+            )
+        )
+        field = self.remap_stack.process(field)
+        r0, r1, val = float(self.r_0), float(self.r_1), float(self.val)
+        field = (r1 - r0) * field + r0 if use_range else val * field
+        return field
+
+    def draw(self, layout, name: str):
+        use_range = self.val_mode == "RANGE"
+        row = layout.row(align=True)
+        row.label(text=name)
+        row.prop(self, "val_mode", expand=True)
+        row = layout.row(align=True)
+        if use_range:
+            row.prop(self, "r_0")
+            row.prop(self, "r_1")
+        else:
+            row.prop(self, "val")
+        row = layout.row(align=True)
+        if len(self.remap_stack.modes) < 1:
+            left = row.split(factor=0.5)
+            left.prop(self, "group", text="")
+            right = left.row()
+            right.prop(self, "strict")
+            self.remap_stack.draw(right)
+        else:
+            left = row.split(factor=0.8)
+            left.prop(self, "group", text="")
+            right = left.row()
+            right.prop(self, "strict")
+            row = layout.row()
+            row.alignment = "CENTER"
+            row.enabled = False
+            row.label(text="Remapping Functions")
+            self.remap_stack.draw(layout)
