@@ -113,9 +113,10 @@ def vg2tensor(
     dtype: torch.dtype = torch.float32,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     W, idx = vg2np(mesh_obj, group_name)
-    return torch.tensor(W, device=device, dtype=dtype), torch.tensor(
-        idx, device=device, dtype=torch.long
-    )
+    nV = len(mesh_obj.data.vertices)
+    weights = torch.zeros((nV,), device=device, dtype=dtype)
+    weights[idx] = torch.tensor(W, device=device, dtype=dtype)
+    return weights, torch.tensor(idx, device=device, dtype=torch.long)
 
 
 def vn2np(mesh_obj: bpy.types.Object) -> Tuple[np.ndarray, np.ndarray]:
