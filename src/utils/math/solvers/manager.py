@@ -1,0 +1,96 @@
+import torch
+
+from typing import List, Tuple, Type
+
+from .config import SolverConfig
+from .preconds import (
+    Preconditioner,
+    JacobiPreconditioner,
+    BlockJacobiPreconditioner,
+    LeftScalingPreconditioner,
+    IterativePreconditioner,
+    SymmetricScalingPreconditioner,
+    ApproximateInversePreconditioner,
+)
+from .solvers import (
+    Result,
+    SystemSolver,
+    DirectSparseSolver,
+    ConjugateGradientSolver,
+    BiConjugateGradientSolver,
+    BiConjugateGradientStabilizedSolver,
+)
+from ...singleton import Singleton
+
+
+class Solver(Singleton):
+
+    _solver_classes = {
+        "Direct": DirectSparseSolver,
+        "Conjugate Gradient": ConjugateGradientSolver,
+        "Biconjugate Gradient": BiConjugateGradientSolver,
+        "BiCGSTAB": BiConjugateGradientStabilizedSolver,
+    }
+
+    _precond_classes = {
+        "None": Preconditioner,
+        "Jacobi": JacobiPreconditioner,
+        "Block Jacobi": BlockJacobiPreconditioner,
+        "Left Scaling": LeftScalingPreconditioner,
+        "Iterative": IterativePreconditioner,
+        "Symmetric": SymmetricScalingPreconditioner,
+        "Approx Inverse": ApproximateInversePreconditioner,
+    }
+
+    def get_solver_options(self, config: SolverConfig) -> List[Tuple]:
+        options = [(name, name, "") for name, cls in Solver._solver_classes.items()]
+        return [("AUTO", "Auto", ""), *options]
+
+    def get_precond_options(self, config: SolverConfig) -> List[Tuple]:
+        is_direct = config.solver == "Direct"
+        if is_direct:
+            return [("NONE", "None", "")]
+        return [(name, name, "") for name, cls in Solver._solver_classes.items()]
+
+    def solve(self, A: torch.Tensor, b: torch.Tensor, config: SolverConfig) -> Result:
+        solver = config.solver
+        if solver == "AUTO":
+            solver, precond = self.derive_solver()
+
+    def derive_solver(
+        self, A: torch.Tensor, b: torch.Tensor, config: SolverConfig
+    ) -> SystemSolver:
+        symmetric = torch.allclose(A, A.T)
+        eig_min = torch.linalg.eigvals(A).real.min()
+
+        if symmetric and eig_min > 0:
+            precond = self.derive_precond(A, b, ConjugateGradientSolver, config)
+            return ConjugateGradientSolver(
+                A, b, precond, iters=config.iters, tolerance=config.tolerance
+            )
+        else:
+            precond = self.derive_precond(
+                A, b, BiConjugateGradientStabilizedSolver, config
+            )
+            return BiConjugateGradientStabilizedSolver(
+                A, b, precond, iters=config.iters, tolerance=config.tolerance
+            )
+
+    def derive_precond(
+        self,
+        A: torch.Tensor,
+        b: torch.Tensor,
+        solver_cls: Type[SystemSolver],
+        config: SolverConfig,
+    ) -> Preconditioner:
+        if solver_cls == DirectSparseSolver:
+            return Preconditioner()
+        cond = torch.linalg.cond(A).real
+        if cond < 1e3:
+            return Preconditioner()
+        sparse = A.is_sparse
+        return (
+            BlockJacobiPreconditioner(config.block_size)
+            if sparse
+            else JacobiPreconditioner()
+        )

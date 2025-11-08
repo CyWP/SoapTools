@@ -104,6 +104,9 @@ class MESH_OT_MinimalSurface(bpy.types.Operator):
 
     def cancel(self, context):
         self._job = None
-        context.window_manager.event_timer_remove(self._timer)
+        try:
+            context.window_manager.event_timer_remove(self._timer)
+        except:
+            pass
         self.report({"INFO"}, "Minimal surface computation canceled.")
         return {"CANCELLED"}

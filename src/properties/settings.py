@@ -1,7 +1,9 @@
 import bpy
-from bpy.props import PointerProperty, EnumProperty
-from bpy.types import PropertyGroup
 import torch
+
+from bpy.props import PointerProperty, EnumProperty, IntProperty
+from bpy.types import PropertyGroup
+from typing import Dict
 
 from .svm import ScalarVertexMapSettings
 from .v_group import SimpleVertexGroup
@@ -27,6 +29,48 @@ class GlobalSettings(PropertyGroup):
 
     def get_device(self) -> torch.device:
         return torch.device(self.device)
+
+
+class SolverSettings(PropertyGroup):
+    device: bpy.props.EnumProperty(
+        name="Device",
+        description="Compute device used for torch operations",
+        items=get_torch_devices(),
+    )  # type: ignore
+
+    solver: bpy.props.EnumProperty(
+        name="Solver",
+        description="Solver used for linear system.",
+        items=[],
+    )  # type: ignore
+
+    precond: bpy.props.EnumProperty(
+        name="Precond",
+        description="Preconditionning for linear system solver.",
+        items=[],
+    )  # type: ignore
+
+    iters: bpy.props.IntProperty(
+        name="Iterations",
+        description="Solver iterations.",
+        default=100,
+    )  # type: ignore
+
+    tolerance: bpy.porps.FloatProperty(
+        name="Tolerance",
+        description="Forces solver to cease iterating once error is below tolerance.",
+        default=0,
+        precision=8,
+    )  # type: ignore
+
+    def get_device(self) -> torch.device:
+        return torch.device(self.device)
+
+    def get_dict(self) -> Dict:
+        return
+
+    def get_config(self) -> SolverConfig:
+        return SolverConfig(self.get_dict())
 
 
 class MinSrfSettings(PropertyGroup):
