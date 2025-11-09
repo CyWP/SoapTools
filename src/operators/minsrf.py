@@ -10,7 +10,7 @@ from ..utils.blend_data.data_ops import (
 from ..utils.blend_data.bridges import mesh2tensor, vg2tensor
 from ..utils.jobs import BackgroundJob
 from ..utils.blend_data.mesh_obj import apply_first_n_modifiers, update_mesh_vertices
-from ..utils.math.solvers import solve_minimal_surface
+from ..utils.math.problems import solve_minimal_surface
 
 
 class MESH_OT_MinimalSurface(bpy.types.Operator):
@@ -34,11 +34,8 @@ class MESH_OT_MinimalSurface(bpy.types.Operator):
 
     def draw(self, context: Context):
         layout = self.layout
-        g_set = context.scene.soap_settings
-        op_set = context.scene.soap_minsrf_settings
+        op_set = context.scene.soap_settings.minsrf
 
-        row = layout.row()
-        row.prop(g_set, "device", expand=True)
         box = layout.box()
         row = box.row()
         row.prop(op_set, "apply_after")
@@ -47,12 +44,17 @@ class MESH_OT_MinimalSurface(bpy.types.Operator):
         left.prop(op_set.fixed_verts, "group", text="Pinned")
         right = left.row()
         right.prop(op_set.fixed_verts, "strict")
+        row = layout.row()
+        row.alignment = "CENTER"
+        row.label(text="Solver", emboss=False)
+        box = layout.box()
+        op_set.solver.draw(box)
 
     def execute(self, context):
         obj = context.active_object
-        g_set = context.scene.soap_settings
-        op_set = context.scene.soap_minsrf_settings
-        device = g_set.get_device()
+        op_set = context.scene.soap_settings.minsrf
+        device = op_set.solver.get_device()
+        config = op_set.solver.get_config()
         vg = op_set.fixed_verts.group
         apply_after = int(op_set.apply_after)
         strict_vgs = [vg] if op_set.fixed_verts.strict else []
@@ -76,7 +78,7 @@ class MESH_OT_MinimalSurface(bpy.types.Operator):
 
         self.new_obj = new_obj
         self.original_obj = obj
-        self._job = BackgroundJob(solve_minimal_surface, V, F, idx)
+        self._job = BackgroundJob(solve_minimal_surface, config, V, F, idx)
 
         # Add a timer
         self._timer = context.window_manager.event_timer_add(0.2, window=context.window)

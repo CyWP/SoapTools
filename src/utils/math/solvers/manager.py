@@ -50,12 +50,44 @@ class Solver(Singleton):
         is_direct = config.solver == "Direct"
         if is_direct:
             return [("NONE", "None", "")]
-        return [(name, name, "") for name, cls in Solver._solver_classes.items()]
+        options = [(name, name, "") for name, cls in Solver._solver_classes.items()]
+        return [("AUTO", "Auto", ""), *options]
 
     def solve(self, A: torch.Tensor, b: torch.Tensor, config: SolverConfig) -> Result:
-        solver = config.solver
-        if solver == "AUTO":
-            solver, precond = self.derive_solver()
+        solver = self.get_solver(A, b, config)
+        return solver.solve()
+
+    def get_solver(
+        self, A: torch.Tensor, b: torch.Tensor, config: SolverConfig
+    ) -> SystemSolver:
+        s_name = config.solver
+        if s_name == "AUTO":
+            return self.derive_solver(A, b, config)
+        elif s_name == "DIRECT":
+            return DirectSparseSolver(A, b)
+        else:
+            solver_cls = Solver._solver_classes.get(s_name, None)
+            if solver_cls is None:
+                raise ValueError(f"'{s_name}' is not a valid solver class name.")
+            precond = self.get_precond(A, b, config, solver_cls)
+            return solver_cls(A, b, precond, config.iters, config.tolerance)
+
+    def get_precond(
+        self,
+        A: torch.Tensor,
+        b: torch.Tensor,
+        config: SolverConfig,
+        solver_cls: Type[SystemSolver],
+    ) -> Preconditioner:
+        p_name = config.precond
+        if p_name == "AUTO":
+            return self.derive_precond(A, b, config, solver_cls)
+        elif p_name == "Block Jacobi":
+            return BlockJacobiPreconditioner(config.block_size)
+        precond_cls = Solver._precond_classes.get(p_name, None)
+        if precond_cls is None:
+            raise ValueError(f"'{p_name}' is not a valid Preconditioner class.")
+        return precond_cls()
 
     def derive_solver(
         self, A: torch.Tensor, b: torch.Tensor, config: SolverConfig

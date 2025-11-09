@@ -1,73 +1,13 @@
 import torch
-import numpy as np
-import scipy.sparse.linalg as spla
-from scipy.sparse import csr_matrix
 
-from typing import Union, Optional
+from typing import Optional
 
+from .solvers import SolverConfig, Solver
 from .sparse_ops import sparse_cotan_laplacian, sparse_eye, sparse_kron, sparse_mask
 
 
-def conjugate_gradient(
-    A: torch.Tensor, b: torch.Tensor, tol: float = 1e-8, max_iter: int = 500
-) -> torch.Tensor:
-    """
-    Solve Ax = b using Conjugate Gradient (CG) method.
-    Works for symmetric positive definite (SPD) sparse matrices.
-    Supports CUDA and CPU.
-    """
-    x = torch.zeros_like(b)
-    # r = b - torch.sparse.mm(A, x.unsqueeze(1)).squeeze(1)
-    r = b - (A @ x.unsqueeze(1)).squeeze(1)
-    p = r.clone()
-    rs_old = torch.dot(r, r)
-
-    for _ in range(max_iter):
-        # Ap = torch.sparse.mm(A, p.unsqueeze(1)).squeeze(1)
-        Ap = (A @ p.unsqueeze(1)).squeeze(1)
-        alpha = rs_old / torch.dot(p, Ap)
-        x += alpha * p
-        r -= alpha * Ap
-        rs_new = torch.dot(r, r)
-        if torch.sqrt(rs_new) < tol:
-            break
-        p = r + (rs_new / rs_old) * p
-        rs_old = rs_new
-
-    return x
-
-
-def sparse_solve(A: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
-    """
-    Solve Ax = b for sparse A.
-    """
-    device = b.device
-
-    if device.type == "cuda":
-        x = conjugate_gradient(A, b)
-        return x
-    else:
-        if A.layout == torch.sparse_coo:
-            row, col = A.indices()
-            data = A.values()
-            A_csr = csr_matrix(
-                (data.cpu().numpy(), (row.cpu().numpy(), col.cpu().numpy())),
-                shape=A.shape,
-            )
-        elif A.layout == torch.sparse_csr:
-            data = A.values().cpu().numpy()
-            indices = A.col_indices().cpu().numpy()
-            indptr = A.crow_indices().cpu().numpy()
-            A_csr = csr_matrix((data, indices, indptr), shape=A.shape)
-        else:
-            raise ValueError("Unsupported sparse layout")
-
-        b_cpu = b.cpu().numpy()
-        x_cpu = spla.spsolve(A_csr, b_cpu)
-        return torch.tensor(x_cpu, device=device, dtype=b.dtype)
-
-
 def solve_minimal_surface(
+    config: SolverConfig,
     V: torch.Tensor,
     F: torch.Tensor,
     fixed_idx: torch.Tensor,
@@ -94,9 +34,11 @@ def solve_minimal_surface(
     rhs = torch.sparse.mm(-L_IB, X_B)
 
     V_new = V
+    solver = Solver()
     for dim in range(3):
         b = rhs[:, dim]
-        x_free = sparse_solve(L_II.to_sparse_csr(), b)
+        result = solver.solve(L_II.to_sparse_csr(), b, config)
+        x_free = result.result
         V_new[free_idx, dim] = x_free
     V_new[fixed_idx] = fixed_pos
 
@@ -104,6 +46,7 @@ def solve_minimal_surface(
 
 
 def solve_flation(
+    config: SolverConfig,
     V: torch.Tensor,
     F: torch.Tensor,
     N: torch.Tensor,
@@ -178,7 +121,7 @@ def solve_flation(
     A3_free = sparse_mask(A3.coalesce(), mask, mask)
     b_free = b[mask]
     # Solve sparse system
-    d_free = sparse_solve(A3_free.to_sparse_csr(), b_free)
+    d_free = Solver().solve(A3_free.to_sparse_csr(), b_free, config).result
     # Reassemble displacement
     D = torch.zeros_like(V)
     D[free_idx] = d_free.view(-1, 3)

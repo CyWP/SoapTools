@@ -7,6 +7,7 @@ from .properties import (
     GlobalSettings,
     MinSrfSettings,
     FlationSettings,
+    SolverSettings,
     ScalarVertexMapSettings,
     SimpleVertexGroup,
     RemappingMode,
@@ -24,6 +25,7 @@ classes = [
     RemappingMode,
     RemappingStack,
     ScalarVertexMapSettings,
+    SolverSettings,
     SimpleVertexGroup,
     REMAP_UL_ModeList,
     REMAP_OT_RemoveModeOperator,
@@ -42,14 +44,10 @@ def register():
             bpy.utils.unregister_class(cls)
             bpy.utils.register_class(cls)
     bpy.types.Scene.soap_settings = PointerProperty(type=GlobalSettings)
-    bpy.types.Scene.soap_minsrf_settings = PointerProperty(type=MinSrfSettings)
-    bpy.types.Scene.soap_flation_settings = PointerProperty(type=FlationSettings)
 
 
 def unregister():
     del bpy.types.Scene.soap_settings
-    del bpy.types.Scene.soap_minsrf_settings
-    del bpy.types.Scene.soap_flation_settings
     for cls in reversed(classes):
         try:
             bpy.utils.unregister_class(cls)

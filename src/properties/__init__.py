@@ -8,3 +8,4 @@ from .svm import (
     REMAP_OT_RemoveModeOperator,
 )
 from .v_group import SimpleVertexGroup
+from .solver import SolverSettings
