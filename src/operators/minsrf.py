@@ -46,7 +46,7 @@ class MESH_OT_MinimalSurface(bpy.types.Operator):
         right.prop(op_set.fixed_verts, "strict")
         row = layout.row()
         row.alignment = "CENTER"
-        row.label(text="Solver", emboss=False)
+        row.label(text="Solver")
         box = layout.box()
         op_set.solver.draw(box)
 

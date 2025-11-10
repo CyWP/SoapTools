@@ -7,17 +7,15 @@ from typing import Tuple
 
 from .preconds import Preconditioner
 from ..dense_ops import batched_dot
-from ...easydict import EasyDict
+from ..sparse_ops import SparseTensor
 
 
-class Result(EasyDict):
+class Result:
 
-    _defaults = dict(result=None, converged=False, err=None)
-
-    def __init__(self, **kwargs):
-        data = dict(Result._defaults)
-        data.update(**kwargs)
-        super().__init__(**data)
+    def __init__(self, result=None, converged=False, err=None):
+        self.result = result
+        self.converged = converged
+        self.err = err
 
 
 class SystemSolver:
@@ -58,7 +56,7 @@ class DirectSparseSolver(SystemSolver):
 
     name = "Direct"
 
-    def __init__(self, A: torch.Tensor, b: torch.Tensor, device=None):
+    def __init__(self, A: SparseTensor, b: torch.Tensor, device=None):
         self.A = A
         self.b = b
         self.device = device if device is not None else b.device
@@ -69,21 +67,10 @@ class DirectSparseSolver(SystemSolver):
         pass
 
     def solve_system(self) -> Tuple[torch.Tensor, bool, float]:
-        # Convert A to CSR
-        if self.A.layout == torch.sparse_coo:
-            row, col = self.A.indices()
-            data = self.A.values()
-            A_csr = csr_matrix(
-                (data.cpu().numpy(), (row.cpu().numpy(), col.cpu().numpy())),
-                shape=self.A.shape,
-            )
-        elif self.A.layout == torch.sparse_csr:
-            data = self.A.values().cpu().numpy()
-            indices = self.A.col_indices().cpu().numpy()
-            indptr = self.A.crow_indices().cpu().numpy()
-            A_csr = csr_matrix((data, indices, indptr), shape=self.A.shape)
-        else:
-            raise ValueError(f"Unsupported sparse layout {self.A.layout}")
+        data = self.A.csr.values().cpu().numpy()
+        indices = self.A.csr.col_indices().cpu().numpy()
+        indptr = self.A.csr.crow_indices().cpu().numpy()
+        A_csr = csr_matrix((data, indices, indptr), shape=self.A.shape)
 
         # Convert b
         b_cpu = self.b.cpu().numpy()
@@ -96,7 +83,7 @@ class DirectSparseSolver(SystemSolver):
 
         x = torch.tensor(x_cpu, device=self.device, dtype=self.b.dtype)
         # Compute residual norm
-        r = self.A @ x.unsqueeze(1)
+        r = self.A.csr @ x.unsqueeze(1)
         r = r.squeeze(1) - self.b
         err = torch.linalg.norm(r)
         return x, True, err
@@ -108,7 +95,7 @@ class ConjugateGradientSolver(SystemSolver):
 
     def __init__(
         self,
-        A: torch.Tensor,
+        A: SparseTensor,
         b: torch.tensor,
         precond: Preconditioner,
         iters: int = 100,
@@ -124,7 +111,7 @@ class ConjugateGradientSolver(SystemSolver):
     def setup(self):
         self.A, self.b = self.precond.setup(self.A, self.b)
         self.x = torch.zeros_like(self.b)
-        self.r = self.b - (self.A @ self.x.unsqueeze(1)).squeeze(1)
+        self.r = self.b - (self.A.csr @ self.x.unsqueeze(1)).squeeze(1)
         self.A, self.r = self.precond.apply(self.A, self.r)
         self.p = self.r.clone()
         self.rs_old = batched_dot(self.r, self.r)
@@ -132,7 +119,7 @@ class ConjugateGradientSolver(SystemSolver):
     def solve_system(self) -> Tuple[torch.Tensor, bool, torch.Tensor]:
         rs_new = self.rs_old
         for _ in range(self.iters):
-            Ap = (self.A @ self.p.unsqueeze(1)).squeeze(1)
+            Ap = (self.A.csr @ self.p.unsqueeze(1)).squeeze(1)
             alpha = self.rs_old / batched_dot(self.p, Ap)
             self.x += alpha * self.p
             self.r -= alpha * Ap
@@ -151,7 +138,7 @@ class BiConjugateGradientSolver(SystemSolver):
 
     def __init__(
         self,
-        A: torch.Tensor,
+        A: SparseTensor,
         b: torch.Tensor,
         precond: Preconditioner,
         iters: int = 100,
@@ -181,8 +168,10 @@ class BiConjugateGradientSolver(SystemSolver):
 
     def solve_system(self) -> Tuple[torch.Tensor, bool, float]:
         for _ in range(self.iters):
-            Ap = (self.A @ self.p.unsqueeze(1)).squeeze(1)
-            ATp_hat = (self.A.transpose(-1, -2) @ self.p_hat.unsqueeze(1)).squeeze(1)
+            Ap = (self.A.csr @ self.p.unsqueeze(1)).squeeze(1)
+            ATp_hat = (self.A.csr.transpose(-1, -2) @ self.p_hat.unsqueeze(1)).squeeze(
+                1
+            )
 
             denom = batched_dot(self.p_hat, Ap)
             # prevent divide by zero
@@ -215,7 +204,7 @@ class BiConjugateGradientStabilizedSolver(SystemSolver):
 
     def __init__(
         self,
-        A: torch.Tensor,
+        A: SparseTensor,
         b: torch.Tensor,
         precond: Preconditioner,
         iters: int = 100,
@@ -234,7 +223,7 @@ class BiConjugateGradientStabilizedSolver(SystemSolver):
 
         # Initialize
         self.x = torch.zeros_like(self.b)
-        self.r = self.b - (self.A @ self.x.unsqueeze(1)).squeeze(1)
+        self.r = self.b - (self.A.csr @ self.x.unsqueeze(1)).squeeze(1)
         self.r_hat = self.r.clone()  # fixed shadow residual
         self.rho_old = torch.ones_like(batched_dot(self.r_hat, self.r))
         self.alpha = torch.zeros_like(self.rho_old)
@@ -253,7 +242,7 @@ class BiConjugateGradientStabilizedSolver(SystemSolver):
 
             # Apply preconditioner
             self.A, self.p = self.precond.apply(self.A, self.p)
-            self.v = (self.A @ self.p.unsqueeze(1)).squeeze(1)
+            self.v = (self.A.csr @ self.p.unsqueeze(1)).squeeze(1)
 
             denom = batched_dot(self.r_hat, self.v)
             denom = torch.where(
@@ -268,7 +257,7 @@ class BiConjugateGradientStabilizedSolver(SystemSolver):
 
             # Apply preconditioner again
             self.A, s = self.precond.apply(self.A, s)
-            t = (self.A @ s.unsqueeze(1)).squeeze(1)
+            t = (self.A.csr @ s.unsqueeze(1)).squeeze(1)
 
             t_dot_t = batched_dot(t, t)
             omega = batched_dot(t, s) / t_dot_t

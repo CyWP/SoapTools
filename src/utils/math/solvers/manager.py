@@ -1,16 +1,12 @@
 import torch
 
-from typing import List, Tuple, Type
+from typing import Dict, Type
 
 from .config import SolverConfig
 from .preconds import (
     Preconditioner,
     JacobiPreconditioner,
-    BlockJacobiPreconditioner,
     LeftScalingPreconditioner,
-    IterativePreconditioner,
-    SymmetricScalingPreconditioner,
-    ApproximateInversePreconditioner,
 )
 from .solvers import (
     Result,
@@ -21,6 +17,7 @@ from .solvers import (
     BiConjugateGradientStabilizedSolver,
 )
 from ...singleton import Singleton
+from ..sparse_ops import SparseTensor
 
 
 class Solver(Singleton):
@@ -33,37 +30,26 @@ class Solver(Singleton):
     }
 
     _precond_classes = {
-        "None": Preconditioner,
+        "NONE": Preconditioner,
         "Jacobi": JacobiPreconditioner,
-        "Block Jacobi": BlockJacobiPreconditioner,
         "Left Scaling": LeftScalingPreconditioner,
-        "Iterative": IterativePreconditioner,
-        "Symmetric": SymmetricScalingPreconditioner,
-        "Approx Inverse": ApproximateInversePreconditioner,
     }
 
-    def get_solver_options(self, config: SolverConfig) -> List[Tuple]:
-        options = [(name, name, "") for name, cls in Solver._solver_classes.items()]
-        return [("AUTO", "Auto", ""), *options]
-
-    def get_precond_options(self, config: SolverConfig) -> List[Tuple]:
-        is_direct = config.solver == "Direct"
-        if is_direct:
-            return [("NONE", "None", "")]
-        options = [(name, name, "") for name, cls in Solver._solver_classes.items()]
-        return [("AUTO", "Auto", ""), *options]
+    def initialize(self, *args, **kwargs):
+        pass
 
     def solve(self, A: torch.Tensor, b: torch.Tensor, config: SolverConfig) -> Result:
+        A = SparseTensor(A)
         solver = self.get_solver(A, b, config)
         return solver.solve()
 
     def get_solver(
-        self, A: torch.Tensor, b: torch.Tensor, config: SolverConfig
+        self, A: SparseTensor, b: torch.Tensor, config: SolverConfig
     ) -> SystemSolver:
         s_name = config.solver
         if s_name == "AUTO":
             return self.derive_solver(A, b, config)
-        elif s_name == "DIRECT":
+        elif s_name == "Direct":
             return DirectSparseSolver(A, b)
         else:
             solver_cls = Solver._solver_classes.get(s_name, None)
@@ -74,28 +60,28 @@ class Solver(Singleton):
 
     def get_precond(
         self,
-        A: torch.Tensor,
+        A: SparseTensor,
         b: torch.Tensor,
         config: SolverConfig,
         solver_cls: Type[SystemSolver],
     ) -> Preconditioner:
         p_name = config.precond
+        if p_name == "NONE":
+            Preconditioner()
         if p_name == "AUTO":
             return self.derive_precond(A, b, config, solver_cls)
-        elif p_name == "Block Jacobi":
-            return BlockJacobiPreconditioner(config.block_size)
         precond_cls = Solver._precond_classes.get(p_name, None)
         if precond_cls is None:
             raise ValueError(f"'{p_name}' is not a valid Preconditioner class.")
         return precond_cls()
 
     def derive_solver(
-        self, A: torch.Tensor, b: torch.Tensor, config: SolverConfig
+        self, A: SparseTensor, b: torch.Tensor, config: SolverConfig
     ) -> SystemSolver:
-        symmetric = torch.allclose(A, A.T)
-        eig_min = torch.linalg.eigvals(A).real.min()
+        symmetric = A.is_symmetric()
+        spd = A.is_spd()
 
-        if symmetric and eig_min > 0:
+        if symmetric and spd:
             precond = self.derive_precond(A, b, ConjugateGradientSolver, config)
             return ConjugateGradientSolver(
                 A, b, precond, iters=config.iters, tolerance=config.tolerance
@@ -110,19 +96,12 @@ class Solver(Singleton):
 
     def derive_precond(
         self,
-        A: torch.Tensor,
+        A: SparseTensor,
         b: torch.Tensor,
         solver_cls: Type[SystemSolver],
         config: SolverConfig,
     ) -> Preconditioner:
         if solver_cls == DirectSparseSolver:
             return Preconditioner()
-        cond = torch.linalg.cond(A).real
-        if cond < 1e3:
-            return Preconditioner()
-        sparse = A.is_sparse
-        return (
-            BlockJacobiPreconditioner(config.block_size)
-            if sparse
-            else JacobiPreconditioner()
-        )
+        # Would be nice: find a way to calculate efficiently condition number of A in case it doesn't need a Preconditioner
+        return Preconditioner()

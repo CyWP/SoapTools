@@ -54,7 +54,7 @@ class MESH_OT_Inflation(Operator):
         row.prop(op_set, "apply_after")
         row = layout.row()
         row.alignment = "CENTER"
-        row.label(text="Constraints", emboss=False)
+        row.label(text="Constraints")
         row = layout.row()
         row.prop(op_set, "active_constraint", expand=True)
         box = layout.box()
@@ -71,7 +71,7 @@ class MESH_OT_Inflation(Operator):
             raise ValueError(f"'{active} is an invalid constraint.")
         row = layout.row()
         row.alignment = "CENTER"
-        row.label(text="Solver", emboss=False)
+        row.label(text="Solver")
         box = layout.box()
         op_set.solver.draw(box)
 

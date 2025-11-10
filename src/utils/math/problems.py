@@ -37,7 +37,9 @@ def solve_minimal_surface(
     solver = Solver()
     for dim in range(3):
         b = rhs[:, dim]
-        result = solver.solve(L_II.to_sparse_csr(), b, config)
+        result = solver.solve(L_II, b, config)
+        if isinstance(result.err, Exception):
+            raise result.err
         x_free = result.result
         V_new[free_idx, dim] = x_free
     V_new[fixed_idx] = fixed_pos
@@ -121,7 +123,7 @@ def solve_flation(
     A3_free = sparse_mask(A3.coalesce(), mask, mask)
     b_free = b[mask]
     # Solve sparse system
-    d_free = Solver().solve(A3_free.to_sparse_csr(), b_free, config).result
+    d_free = Solver().solve(A3_free, b_free, config).result
     # Reassemble displacement
     D = torch.zeros_like(V)
     D[free_idx] = d_free.view(-1, 3)

@@ -30,9 +30,9 @@ classes = [
     REMAP_UL_ModeList,
     REMAP_OT_RemoveModeOperator,
     REMAP_OT_AddModeOperator,
-    GlobalSettings,
     MinSrfSettings,
     FlationSettings,
+    GlobalSettings,
 ]
 
 
