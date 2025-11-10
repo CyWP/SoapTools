@@ -28,8 +28,8 @@ class SparseTensor:
 
     def is_symmetric(self) -> bool:
         self.coo.coalesce()
-        doubled = 2 * self.coo
-        added = self.coo + self.coo.T.coalesce()
+        doubled = (2 * self.coo).coalesce()
+        added = (self.coo + self.coo.T.coalesce()).coalesce()
         if doubled.indices().shape != added.indices().shape:
             return False
         return torch.all(doubled.values() == added.values())

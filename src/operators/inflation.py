@@ -82,9 +82,9 @@ class MESH_OT_Inflation(Operator):
         solver_config = op_set.solver.get_config()
         vg_fixed = op_set.fixed_verts.group
         vg_fixed_strict = op_set.fixed_verts.strict
-        if vg_fixed == "NONE":
-            self.report({"ERROR"}, "A vertex group must be selected for constraints.")
-            return {"CANCELLED"}
+        # if vg_fixed == "NONE":
+        #     self.report({"ERROR"}, "A vertex group must be selected for constraints.")
+        #     return {"CANCELLED"}
         apply_after = int(op_set.apply_after)
 
         new_obj = duplicate_mesh_object(obj, deep=True)
@@ -93,7 +93,9 @@ class MESH_OT_Inflation(Operator):
         if apply_after > 0:
             link_to_same_scene_collections(obj, new_obj)
             apply_first_n_modifiers(
-                new_obj, apply_after, [vg_fixed] if vg_fixed_strict else []
+                new_obj,
+                apply_after,
+                [vg_fixed] if vg_fixed_strict and vg_fixed != "NONE" else [],
             )
             for coll in new_obj.users_collection:
                 coll.objects.unlink(new_obj)
@@ -131,7 +133,6 @@ class MESH_OT_Inflation(Operator):
     def modal(self, context, event):
         if event.type == "TIMER" and self._job.is_done():
             new_V = self._job.get_result()
-            print(new_V, new_V.shape, new_V.isnan().sum())
             update_mesh_vertices(self.new_obj, new_V.cpu().numpy())
             link_to_same_scene_collections(self.original_obj, self.new_obj)
             context.window_manager.event_timer_remove(self._timer)

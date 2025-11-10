@@ -32,13 +32,11 @@ class SimpleVertexGroup(PropertyGroup):
         self, obj: Object, device: torch.device
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         nV = len(obj.data.vertices)
-        if self.strict:
-            harden_vertex_group(obj, self.group)
-        return (
-            vg2tensor(obj, self.group, device=device)
-            if self.group != "NONE"
-            else (
+        if self.group == "NONE":
+            return (
                 torch.ones((nV,), device=device),
                 torch.tensor([], device=device, dtype=torch.long),
             )
-        )
+        if self.strict:
+            harden_vertex_group(obj, self.group)
+        return vg2tensor(obj, self.group, device=device)
