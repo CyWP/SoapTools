@@ -1,6 +1,64 @@
+from __future__ import annotations
 import torch
 
-# RETURN EVERYTHING AS COO
+from typing import Tuple
+
+
+class SparseTensor:
+    """
+    Class that holds csr and coo representation of same matrix.
+    Only used when necessary given the duplication.
+    """
+
+    def __init__(self, M: torch.Tensor):
+        self.csr = M.to_sparse_csr()
+        self.coo = M.to_sparse_coo()
+        self.shape = self.coo.shape
+
+    def update_coo(self):
+        self.coo = self.csr.to_sparse_coo()
+
+    def update_csr(self):
+        self.csr = self.coo.to_sparse_csr()
+
+    def to(self, device: torch.device) -> SparseTensor:
+        new_csr = self.csr.to(device)
+        new_obj = SparseTensor(new_csr)
+        return new_obj
+
+    def is_symmetric(self) -> bool:
+        self.coo.coalesce()
+        doubled = 2 * self.coo
+        added = self.coo + self.coo.T.coalesce()
+        if doubled.indices().shape != added.indices().shape:
+            return False
+        return torch.all(doubled.values() == added.values())
+
+    def diagonal(self) -> torch.Tensor:
+        self.coo.coalesce()
+        idx = self.coo.indices()
+        diag_idx = torch.where(idx[0] == idx[1])
+        new_idx = torch.stack([idx[0][diag_idx]] * 2, dim=0)
+        new_val = self.coo.values()[diag_idx]
+        return torch.sparse_coo_tensor(new_idx, new_val, self.coo.shape)
+
+    def inv_diagonal(self) -> torch.Tensor:
+        self.coo.coalesce()
+        idx = self.coo.indices()
+        diag_idx = torch.where(idx[0] == idx[1])
+        new_idx = torch.stack([idx[0][diag_idx]] * 2, dim=0)
+        new_val = self.coo.values()[diag_idx]
+        return torch.sparse_coo_tensor(new_idx, 1 / new_val, self.coo.shape)
+
+    def coalesce(self):
+        self.coo.coalesce()
+
+    def eigs(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        return torch.lobpcg(self.coo)
+
+    def is_spd(self) -> bool:
+        eigvals, eigvecs = self.eigs()
+        return eigvals.min().item() >= 0
 
 
 def sparse_cotan_laplacian(

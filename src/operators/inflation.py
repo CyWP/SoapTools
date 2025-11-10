@@ -7,10 +7,10 @@ from ..utils.blend_data.data_ops import (
     duplicate_mesh_object,
     link_to_same_scene_collections,
 )
-from ..utils.blend_data.bridges import mesh2tensor, vg2tensor, vn2tensor
+from ..utils.blend_data.bridges import mesh2tensor, vn2tensor
 from ..utils.jobs import BackgroundJob
 from ..utils.blend_data.mesh_obj import apply_first_n_modifiers, update_mesh_vertices
-from ..utils.math.solvers import solve_flation
+from ..utils.math.problems import solve_flation
 
 
 def modifier_items(caller, context: Context):
@@ -42,11 +42,8 @@ class MESH_OT_Inflation(Operator):
 
     def draw(self, context: Context):
         layout = self.layout
-        g_set = context.scene.soap_settings
-        op_set = context.scene.soap_flation_settings
+        op_set = context.scene.soap_settings.flation
 
-        row = layout.row()
-        row.prop(g_set, "device", expand=True)
         box = layout.box()
         row = box.row()
         left = row.split(factor=0.8)
@@ -72,12 +69,17 @@ class MESH_OT_Inflation(Operator):
             op_set.beta.draw(box, "Beta")
         else:
             raise ValueError(f"'{active} is an invalid constraint.")
+        row = layout.row()
+        row.alignment = "CENTER"
+        row.label(text="Solver")
+        box = layout.box()
+        op_set.solver.draw(box)
 
     def execute(self, context: Context):
         obj = context.active_object
-        g_set = context.scene.soap_settings
-        op_set = context.scene.soap_flation_settings
-        device = g_set.get_device()
+        op_set = context.scene.soap_settings.flation
+        device = op_set.solver.get_device()
+        solver_config = op_set.solver.get_config()
         vg_fixed = op_set.fixed_verts.group
         vg_fixed_strict = op_set.fixed_verts.strict
         if vg_fixed == "NONE":
@@ -110,6 +112,7 @@ class MESH_OT_Inflation(Operator):
         self.original_obj = obj
         self._job = BackgroundJob(
             solve_flation,
+            solver_config,
             V,
             F,
             N,

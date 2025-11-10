@@ -32,7 +32,7 @@ def apply_first_n_modifiers(
                     for vg in strict_vgs:
                         harden_vertex_group(obj, vg)
             except RuntimeError as e:
-                print(f"Failed to apply modifier {mod.name}: {e}")
+                print(f"Failed to apply modifier {mod.name}: {e}")  # TODO: add logger
     finally:
         # Restore previous active object
         bpy.context.view_layer.objects.active = prev_active
