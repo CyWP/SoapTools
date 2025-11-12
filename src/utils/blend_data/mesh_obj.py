@@ -1,13 +1,15 @@
 import bpy
+import bmesh
 import numpy as np
 
+from bpy.types import Object, Context
 from typing import List
 
 from .vertex_groups import harden_vertex_group
 
 
 def apply_first_n_modifiers(
-    obj: bpy.types.Object,
+    obj: Object,
     n: int,
     strict_vgs: List[str] = None,
 ):
@@ -38,7 +40,7 @@ def apply_first_n_modifiers(
         bpy.context.view_layer.objects.active = prev_active
 
 
-def modifier_items(caller, context):
+def modifier_items(caller, context: Context):
     obj = context.active_object
     if obj and obj.type == "MESH" and obj.modifiers:
         data = [(str(i + 1), mod.name, "") for i, mod in enumerate(obj.modifiers)]
@@ -46,9 +48,9 @@ def modifier_items(caller, context):
     return [("0", "Modifier", "")]
 
 
-def update_mesh_vertices(obj: bpy.types.Object, V: np.ndarray):
+def update_mesh_vertices(obj: Object, V: np.ndarray):
     """Update the vertex positions of an existing mesh object."""
-    if not isinstance(obj, bpy.types.Object) or obj.type != "MESH":
+    if not isinstance(obj, Object) or obj.type != "MESH":
         raise TypeError("obj must be a Blender mesh object")
     if V.shape[1] != 3:
         raise ValueError("V must have shape (n, 3)")
@@ -67,3 +69,28 @@ def update_mesh_vertices(obj: bpy.types.Object, V: np.ndarray):
     # Fast update via foreach_set
     mesh.vertices.foreach_set("co", V.ravel())
     mesh.update()
+
+
+def select_boundary(obj: Object):
+    if obj is None or obj.type != "MESH":
+        raise TypeError("Active object is not a mesh.")
+
+    # Ensure we're in Edit Mode and have an up-to-date mesh
+    bpy.ops.object.mode_set(mode="EDIT")
+    bm = bmesh.from_edit_mesh(obj.data)
+
+    selected_verts = [v for v in bm.verts if v.select]
+    for v in selected_verts:
+        v.select = False
+    selected_verts = set(selected_verts)
+
+    def is_inside_boundary(e) -> bool:
+        nonlocal selected_verts
+        return e.vertices[0] in selected_verts and e.vertices[1] in selected_verts
+
+    for v in selected_verts:
+        if not all(is_inside_boundary(e) for e in v.link_edges):
+            v.select = True
+
+    # Update the edit mesh so the viewport updates
+    bmesh.update_edit_mesh(obj.data, loop_triangles=False, destructive=False)
