@@ -1,4 +1,10 @@
-from .settings import GlobalSettings, MinSrfSettings, FlationSettings
+from .settings import (
+    GlobalSettings,
+    MinSrfSettings,
+    FlationSettings,
+    SoftenVertexGroupSettings,
+    HardenVertexGroupSettings,
+)
 from .svm import (
     ScalarVertexMapSettings,
     RemappingMode,

@@ -3,20 +3,20 @@ import bpy
 from bpy.types import Context
 
 from ..utils.blend_data.vertex_groups import (
-    harden_vertex_group,
+    soften_vertex_group_inwards,
+    soften_vertex_group_outwards,
     get_vertex_group_copy,
-    vertex_group_items,
 )
 
 
-class MESH_OT_HardenVGroup(bpy.types.Operator):
-    bl_idname = "soap.vghard"
-    bl_label = "SoapTools: Harden vertex group"
+class MESH_OT_SoftenVGroup(bpy.types.Operator):
+    bl_idname = "soap.vgsoft"
+    bl_label = "SoapTools: Soften vertex group"
     bl_icon = "NODE_MATERIAL"
-    bl_description = "Keeps local maxima of vertex groups, sets rest to 0."
+    bl_description = "Softly expand vertex group by a defined number of rings."
     bl_options = {"REGISTER", "UNDO"}
 
-    _suffix = "_hardened"
+    _suffix = "_softened"
 
     @classmethod
     def poll(cls, context: Context):
@@ -30,7 +30,7 @@ class MESH_OT_HardenVGroup(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self)
 
     def draw(self, context: Context):
-        settings = context.scene.soap_settings.vghard
+        settings = context.scene.soap_settings.vgsoft
         layout = self.layout
         box = layout.box()
         row = box.row()
@@ -38,10 +38,13 @@ class MESH_OT_HardenVGroup(bpy.types.Operator):
         left.prop(settings, "group", text="")
         right = left.row()
         right.prop(settings, "copy", text="Copy")
+        row = box.row()
+        row.prop(settings, "rings")
+        row.prop(settings, "direction", expand=True)
 
     def execute(self, context: Context):
         obj = context.active_object
-        settings = context.scene.soap_settings.vghard
+        settings = context.scene.soap_settings.vgsoft
         vg_name: str = settings.group
         do_copy = settings.copy
 
@@ -55,6 +58,9 @@ class MESH_OT_HardenVGroup(bpy.types.Operator):
             target_vg = get_vertex_group_copy(obj, vg_name, new_name, caller=self)
         else:
             target_vg = obj.vertex_groups[vg_name]
-        harden_vertex_group(obj, target_vg.name)
+        if settings.direction == "IN":
+            soften_vertex_group_inwards(obj, target_vg.name, settings.rings)
+        else:
+            soften_vertex_group_outwards(obj, target_vg.name, settings.rings)
 
         return {"FINISHED"}

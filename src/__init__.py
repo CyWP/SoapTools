@@ -2,12 +2,19 @@ import bpy
 
 from bpy.props import PointerProperty
 
-from .operators import MESH_OT_MinimalSurface, MESH_OT_HardenVGroup, MESH_OT_Inflation
+from .operators import (
+    MESH_OT_MinimalSurface,
+    MESH_OT_HardenVGroup,
+    MESH_OT_SoftenVGroup,
+    MESH_OT_Inflation,
+)
 from .properties import (
     GlobalSettings,
     MinSrfSettings,
     FlationSettings,
     SolverSettings,
+    SoftenVertexGroupSettings,
+    HardenVertexGroupSettings,
     ScalarVertexMapSettings,
     SimpleVertexGroup,
     RemappingMode,
@@ -22,8 +29,11 @@ classes = [
     MESH_OT_MinimalSurface,
     MESH_OT_HardenVGroup,
     MESH_OT_Inflation,
+    MESH_OT_SoftenVGroup,
     RemappingMode,
     RemappingStack,
+    HardenVertexGroupSettings,
+    SoftenVertexGroupSettings,
     ScalarVertexMapSettings,
     SolverSettings,
     SimpleVertexGroup,
