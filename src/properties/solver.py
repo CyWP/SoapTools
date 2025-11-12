@@ -81,8 +81,6 @@ class SolverSettings(PropertyGroup):
         if len(get_torch_devices()) > 1:
             row = layout.row()
             row.prop(self, "device", expand=True)
-        else:
-            self.device = "CPU"
         row = layout.row()
         row.prop(self, "solver")
         if solver not in ("AUTO", "Direct"):

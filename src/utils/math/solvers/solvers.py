@@ -30,6 +30,12 @@ class SystemSolver:
     def solve(self) -> Result:
         try:
             res, converged, err = self.solve_system()
+            if res is not None and torch.isnan(res).any():
+                return Result(
+                    None,
+                    False,
+                    Exception(f"Failed to converge: NaN values found in solution."),
+                )
             return Result(result=res, converged=converged, err=err)
         except Exception as e:
             return Result(result=None, converged=False, err=e)

@@ -2,7 +2,7 @@ import torch
 
 from typing import Optional
 
-from .solvers import SolverConfig, Solver
+from .solvers import SolverConfig, Solver, Result
 from .sparse_ops import sparse_cotan_laplacian, sparse_eye, sparse_kron, sparse_mask
 
 
@@ -123,7 +123,10 @@ def solve_flation(
     A3_free = sparse_mask(A3.coalesce(), mask, mask)
     b_free = b[mask]
     # Solve sparse system
-    d_free = Solver().solve(A3_free, b_free, config).result
+    result = Solver().solve(A3_free, b_free, config)
+    if isinstance(result.err, Exception):
+        raise result.err
+    d_free = result.result
     # Reassemble displacement
     D = torch.zeros_like(V)
     D[free_idx] = d_free.view(-1, 3)

@@ -82,9 +82,6 @@ class MESH_OT_Inflation(Operator):
         solver_config = op_set.solver.get_config()
         vg_fixed = op_set.fixed_verts.group
         vg_fixed_strict = op_set.fixed_verts.strict
-        # if vg_fixed == "NONE":
-        #     self.report({"ERROR"}, "A vertex group must be selected for constraints.")
-        #     return {"CANCELLED"}
         apply_after = int(op_set.apply_after)
 
         new_obj = duplicate_mesh_object(obj, deep=True)

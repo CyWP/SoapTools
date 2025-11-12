@@ -238,6 +238,7 @@ class ScalarVertexMapSettings(PropertyGroup):
         field = self.remap_stack.process(field)
         r0, r1, val = float(self.r_0), float(self.r_1), float(self.val)
         field = (r1 - r0) * field + r0 if use_range else val * field
+        print("FIELD", self.group, field)
         return field
 
     def draw(self, layout, name: str):
