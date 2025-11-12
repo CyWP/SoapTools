@@ -1,13 +1,14 @@
 import bpy
 import torch
 
-from bpy.props import PointerProperty, EnumProperty
+from bpy.props import PointerProperty, EnumProperty, IntProperty, BoolProperty
 from bpy.types import PropertyGroup
 
 from .solver import SolverSettings
 from .svm import ScalarVertexMapSettings
 from .v_group import SimpleVertexGroup
 from ..utils.blend_data.mesh_obj import modifier_items
+from ..utils.blend_data.vertex_groups import vertex_group_items
 
 
 class MinSrfSettings(PropertyGroup):
@@ -44,6 +45,28 @@ class FlationSettings(PropertyGroup):
     beta: PointerProperty(type=ScalarVertexMapSettings)  # type:ignore
 
 
+class SoftenVertexGroupSettings(PropertyGroup):
+    group: EnumProperty(name="Vertex Group", items=vertex_group_items)  # type:ignore
+    rings: IntProperty(
+        name="Rings", description="Topologoical smoothing distance", min=1, default=5
+    )  # type:ignore
+    copy: BoolProperty(
+        name="Copy", description="Apply to copy", default=True
+    )  # type:ignore
+    direction: EnumProperty(
+        name="Direction", items=[("IN", "Inwards", ""), ("OUT", "Outwards", "")]
+    )  # type:ignore
+
+
+class HardenVertexGroupSettings(PropertyGroup):
+    group: EnumProperty(name="Vertex Group", items=vertex_group_items)  # type:ignore
+    copy: BoolProperty(
+        name="Copy", description="Apply to copy", default=True
+    )  # type:ignore
+
+
 class GlobalSettings(PropertyGroup):
     minsrf: PointerProperty(type=MinSrfSettings)  # type: ignore
     flation: PointerProperty(type=FlationSettings)  # type: ignore
+    vghard: PointerProperty(type=HardenVertexGroupSettings)  # type:ignore
+    vgsoft: PointerProperty(type=SoftenVertexGroupSettings)  # type:ignore
