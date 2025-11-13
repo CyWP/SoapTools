@@ -1,13 +1,15 @@
 import bpy
+import bmesh
 import numpy as np
 
+from bpy.types import Object, Context
 from typing import List
 
 from .vertex_groups import harden_vertex_group
 
 
 def apply_first_n_modifiers(
-    obj: bpy.types.Object,
+    obj: Object,
     n: int,
     strict_vgs: List[str] = None,
 ):
@@ -38,7 +40,7 @@ def apply_first_n_modifiers(
         bpy.context.view_layer.objects.active = prev_active
 
 
-def modifier_items(caller, context):
+def modifier_items(caller, context: Context):
     obj = context.active_object
     if obj and obj.type == "MESH" and obj.modifiers:
         data = [(str(i + 1), mod.name, "") for i, mod in enumerate(obj.modifiers)]
@@ -46,9 +48,9 @@ def modifier_items(caller, context):
     return [("0", "Modifier", "")]
 
 
-def update_mesh_vertices(obj: bpy.types.Object, V: np.ndarray):
+def update_mesh_vertices(obj: Object, V: np.ndarray):
     """Update the vertex positions of an existing mesh object."""
-    if not isinstance(obj, bpy.types.Object) or obj.type != "MESH":
+    if not isinstance(obj, Object) or obj.type != "MESH":
         raise TypeError("obj must be a Blender mesh object")
     if V.shape[1] != 3:
         raise ValueError("V must have shape (n, 3)")
@@ -67,3 +69,60 @@ def update_mesh_vertices(obj: bpy.types.Object, V: np.ndarray):
     # Fast update via foreach_set
     mesh.vertices.foreach_set("co", V.ravel())
     mesh.update()
+
+
+def select_boundary(obj: Object):
+    if obj is None or obj.type != "MESH":
+        raise TypeError("Active object must be a mesh")
+
+    bpy.ops.object.mode_set(mode="EDIT")
+    bm = bmesh.from_edit_mesh(obj.data)
+    bm.verts.ensure_lookup_table()
+    bm.edges.ensure_lookup_table()
+
+    selected_verts = {v for v in bm.verts if v.select}
+    # selected_edges = {e for e in bm.verts if e.select}
+
+    for v in bm.verts:
+        v.select = False
+    for e in bm.edges:
+        e.select = False
+    for f in bm.faces:
+        f.select = False
+
+    select_verts = set()
+    select_edges = set()
+
+    for v in selected_verts:
+        # A vertex is boundary if at least one of its edges connects to an unselected vertex
+        linked_edges = v.link_edges
+        edges_selected = [e.other_vert(v) in selected_verts for e in linked_edges]
+        if sum(edges_selected) < len(edges_selected):
+            select_verts.add(v)
+            for i, on_edge in enumerate(edges_selected):
+                if on_edge:
+                    select_edges.add(linked_edges[i])
+
+    for v in selected_verts:
+        if v in select_verts:
+            continue
+        linked_edges = v.link_edges
+        edges_selected = [e in select_edges for e in linked_edges]
+        num_connected = sum(edges_selected)
+        if num_connected <= 1 or num_connected >= len(linked_edges):
+            continue
+        for i, is_connected in enumerate(edges_selected):
+            select_verts.add(v)
+            if is_connected:
+                select_edges.add(linked_edges[i])
+
+    for v in select_verts:
+        v.select = True
+        for e in v.link_edges:
+            other = e.other_vert(v)
+            if other not in select_verts:
+                continue
+
+            e.select = True
+
+    bmesh.update_edit_mesh(obj.data, loop_triangles=False, destructive=False)
