@@ -7,6 +7,7 @@ from .operators import (
     MESH_OT_HardenVGroup,
     MESH_OT_SoftenVGroup,
     MESH_OT_Inflation,
+    MESH_OT_SelectBoundary,
 )
 from .properties import (
     GlobalSettings,
@@ -30,6 +31,7 @@ classes = [
     MESH_OT_HardenVGroup,
     MESH_OT_Inflation,
     MESH_OT_SoftenVGroup,
+    MESH_OT_SelectBoundary,
     RemappingMode,
     RemappingStack,
     HardenVertexGroupSettings,

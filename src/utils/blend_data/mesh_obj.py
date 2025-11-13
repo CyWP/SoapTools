@@ -73,24 +73,56 @@ def update_mesh_vertices(obj: Object, V: np.ndarray):
 
 def select_boundary(obj: Object):
     if obj is None or obj.type != "MESH":
-        raise TypeError("Active object is not a mesh.")
+        raise TypeError("Active object must be a mesh")
 
-    # Ensure we're in Edit Mode and have an up-to-date mesh
     bpy.ops.object.mode_set(mode="EDIT")
     bm = bmesh.from_edit_mesh(obj.data)
+    bm.verts.ensure_lookup_table()
+    bm.edges.ensure_lookup_table()
 
-    selected_verts = [v for v in bm.verts if v.select]
-    for v in selected_verts:
+    selected_verts = {v for v in bm.verts if v.select}
+    # selected_edges = {e for e in bm.verts if e.select}
+
+    for v in bm.verts:
         v.select = False
-    selected_verts = set(selected_verts)
+    for e in bm.edges:
+        e.select = False
+    for f in bm.faces:
+        f.select = False
 
-    def is_inside_boundary(e) -> bool:
-        nonlocal selected_verts
-        return e.vertices[0] in selected_verts and e.vertices[1] in selected_verts
+    select_verts = set()
+    select_edges = set()
 
     for v in selected_verts:
-        if not all(is_inside_boundary(e) for e in v.link_edges):
-            v.select = True
+        # A vertex is boundary if at least one of its edges connects to an unselected vertex
+        linked_edges = v.link_edges
+        edges_selected = [e.other_vert(v) in selected_verts for e in linked_edges]
+        if sum(edges_selected) < len(edges_selected):
+            select_verts.add(v)
+            for i, on_edge in enumerate(edges_selected):
+                if on_edge:
+                    select_edges.add(linked_edges[i])
 
-    # Update the edit mesh so the viewport updates
+    for v in selected_verts:
+        if v in select_verts:
+            continue
+        linked_edges = v.link_edges
+        edges_selected = [e in select_edges for e in linked_edges]
+        num_connected = sum(edges_selected)
+        if num_connected <= 1 or num_connected >= len(linked_edges):
+            continue
+        for i, is_connected in enumerate(edges_selected):
+            select_verts.add(v)
+            if is_connected:
+                select_edges.add(linked_edges[i])
+
+    for v in select_verts:
+        v.select = True
+        for e in v.link_edges:
+            other = e.other_vert(v)
+            if other not in select_verts:
+                continue
+
+            e.select = True
+
     bmesh.update_edit_mesh(obj.data, loop_triangles=False, destructive=False)
