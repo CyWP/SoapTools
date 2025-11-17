@@ -1,5 +1,16 @@
 import bpy
 
+from bpy.types import Context, Object, Image
+from typing import List, Tuple
+
+
+def material_items(self, context: Context) -> List[Tuple]:
+    """Return all materials in the scene for an EnumProperty."""
+    items = [("NONE", "None", "")]
+    for mat in bpy.data.materials:
+        items.append((mat.name, mat.name, f"Material: {mat.name}"))
+    return items
+
 
 def duplicate_mesh_object(obj: bpy.types.Object, deep: bool = True) -> bpy.types.Object:
     """
@@ -39,3 +50,67 @@ def link_to_same_scene_collections(
         # Ensure the collection belongs to the scene
         if coll.name in scene.collection.children or coll == scene.collection:
             coll.objects.link(new_obj)
+
+
+def bake_material(
+    obj: Object,
+    uv_map: str,
+    material_name: str,
+    width: int = 512,
+    height: int = 512,
+    bake_type: str = "EMIT",
+) -> Image:
+
+    # Ensure object is active
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+
+    # Set the active UV map
+    uv_layer = obj.data.uv_layers.get(uv_map)
+    if uv_layer is None:
+        raise ValueError(f"UV map '{uv_map}' not found on object '{obj.name}'")
+    obj.data.uv_layers.active = uv_layer
+
+    # Get the material
+    mat = bpy.data.materials.get(material_name)
+    if mat is None:
+        raise ValueError(f"Material '{material_name}' not found")
+
+    # Assign material if not already
+    if mat.name not in obj.data.materials:
+        obj.data.materials.append(mat)
+
+    # Create internal image
+    img_name = f"Bake_{material_name}_{bake_type}"
+    img = bpy.data.images.new(
+        name=img_name, width=width, height=height, alpha=True, float_buffer=True
+    )
+
+    # Add temporary Image Texture node and make it active
+    mat.use_nodes = True
+    nodes = mat.node_tree.nodes
+    tex_node = nodes.new("ShaderNodeTexImage")
+    tex_node.image = img
+    nodes.active = tex_node
+
+    # Switch to object mode
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+    # Set bake engine to Cycles for baking
+    bpy.context.scene.render.engine = "CYCLES"
+
+    # Bake settings
+    bpy.context.scene.cycles.bake_type = bake_type
+    if bake_type == "DIFFUSE":
+        bpy.context.scene.cycles.use_bake_direct = False
+        bpy.context.scene.cycles.use_bake_indirect = False
+        bpy.context.scene.cycles.use_bake_color = True
+
+    # Perform bake
+    bpy.ops.object.bake(type=bake_type)
+
+    # Remove temporary node
+    nodes.remove(tex_node)
+
+    # Return the baked image
+    return img

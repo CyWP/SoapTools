@@ -118,14 +118,13 @@ class ImageTensor(Tensor):
             return [Image.fromarray(i) for i in imgs]
         return Image.fromarray(imgs)
 
-    def uv_sample(self, uv_idx: torch.Tensor, uv_co: torch.Tensor, nV: int):
+    def uv_sample(self, uv_idx: torch.Tensor, uv_co: torch.Tensor):
         """
         Vertex-based bilinear texture sampling and aggregation.
 
         self   : (B, C, H, W) BCHW texture
         uv_idx : (N,)  vertex index for each UV sample
         uv_co  : (N, 2) UV coordinates in [0,1]
-        nV     : number of vertices
 
         Returns:
             sampled : (B, nV, C) per-vertex averaged values
@@ -133,6 +132,7 @@ class ImageTensor(Tensor):
         B, C, H, W = self.shape
         device = uv_co.device
         N = uv_idx.shape[0]
+        nV = uv_idx.max().item() + 1
 
         # Convert UVs to pixel coordinates
         x = uv_co[:, 0] * (W - 1)

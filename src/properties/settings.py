@@ -4,6 +4,7 @@ import torch
 from bpy.props import PointerProperty, EnumProperty, IntProperty, BoolProperty
 from bpy.types import PropertyGroup
 
+from .baking import BakingSettings
 from .solver import SolverSettings
 from .svm import ScalarVertexMapSettings
 from .v_group import SimpleVertexGroup
@@ -70,3 +71,4 @@ class GlobalSettings(PropertyGroup):
     flation: PointerProperty(type=FlationSettings)  # type: ignore
     vghard: PointerProperty(type=HardenVertexGroupSettings)  # type:ignore
     vgsoft: PointerProperty(type=SoftenVertexGroupSettings)  # type:ignore
+    bake: PointerProperty(type=BakingSettings)  # type:ignore

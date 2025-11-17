@@ -8,6 +8,7 @@ from .operators import (
     MESH_OT_SoftenVGroup,
     MESH_OT_Inflation,
     MESH_OT_SelectBoundary,
+    MESH_OT_BakeChannel,
 )
 from .properties import (
     GlobalSettings,
@@ -20,6 +21,7 @@ from .properties import (
     SimpleVertexGroup,
     RemappingMode,
     RemappingStack,
+    BakingSettings,
     REMAP_UL_ModeList,
     REMAP_OT_RemoveModeOperator,
     REMAP_OT_AddModeOperator,
@@ -32,6 +34,8 @@ classes = [
     MESH_OT_Inflation,
     MESH_OT_SoftenVGroup,
     MESH_OT_SelectBoundary,
+    MESH_OT_BakeChannel,
+    BakingSettings,
     RemappingMode,
     RemappingStack,
     HardenVertexGroupSettings,

@@ -220,7 +220,9 @@ def uv2tensor(mesh_obj: Object, uv_map: str, device: torch.device):
     # Fill arrays
     for li, loop in enumerate(mesh.loops):
         uv_idx[li] = loop.vertex_index
-        uv_co[li] = uv_layer.data[li].uv
+        uco = uv_layer.data[li].uv
+        uv_co[li, 0] = uco[0]
+        uv_co[li, 1] = uco[1]
 
     return uv_idx, uv_co
 

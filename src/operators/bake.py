@@ -1,15 +1,14 @@
 import bpy
+import torch
 
 from bpy.types import Context
 
-from ..utils.blend_data.mesh_obj import bake_material
 
-
-class MESH_OT_BakeColor(bpy.types.Operator):
-    bl_idname = "soap.bakecolor"
-    bl_label = "SoapTools: Bake material color"
+class MESH_OT_BakeChannel(bpy.types.Operator):
+    bl_idname = "soap.bake"
+    bl_label = "SoapTools: Bake material channel"
     bl_icon = "NODE_MATERIAL"
-    bl_description = "Bake a material's color to an image, which can be used to map constraints. When mapped, images are considered to be grayscale."
+    bl_description = "Bake one of a material's output channels."
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
@@ -17,7 +16,19 @@ class MESH_OT_BakeColor(bpy.types.Operator):
         obj = context.active_object
         return obj is not None and obj.type == "MESH"
 
+    def invoke(self, context: Context, event):
+        if not self.poll(context):
+            self.report({"ERROR"}, "Active object must be a mesh with vertex groups")
+            return {"CANCELLED"}
+        return context.window_manager.invoke_props_dialog(self)
+
     def execute(self, context: Context):
         obj = context.active_object
-        bake_material()
+        settings = context.scene.soap_settings.bake
+        settings.get_baked(obj, pack=True)
         return {"FINISHED"}
+
+    def draw(self, context: Context):
+        layout = self.layout
+        settings = context.scene.soap_settings.bake
+        settings.draw(layout)
