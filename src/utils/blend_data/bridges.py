@@ -2,11 +2,14 @@ import bpy
 import numpy as np
 import torch
 
+from bpy.types import Object, Image
 from itertools import chain
-from typing import Tuple
+from typing import Tuple, List, Union
+
+from ..img import ImageTensor
 
 
-def np2mesh(context, V: np.ndarray, F: np.ndarray, name: str) -> bpy.types.Object:
+def np2mesh(context, V: np.ndarray, F: np.ndarray, name: str) -> Object:
 
     if not isinstance(V, np.ndarray) or not isinstance(F, np.ndarray):
         raise ValueError("V and F must be NumPy arrays.")
@@ -29,13 +32,11 @@ def np2mesh(context, V: np.ndarray, F: np.ndarray, name: str) -> bpy.types.Objec
     return obj
 
 
-def tensor2mesh(
-    context, V: torch.Tensor, F: torch.Tensor, name: str
-) -> bpy.types.Object:
+def tensor2mesh(context, V: torch.Tensor, F: torch.Tensor, name: str) -> Object:
     return np2mesh(context, V.cpu().numpy(), F.cpu().numpy(), name)
 
 
-def mesh2np(mesh_obj: bpy.types.Object) -> Tuple[np.ndarray, np.ndarray]:
+def mesh2np(mesh_obj: Object) -> Tuple[np.ndarray, np.ndarray]:
     """
     Convert a Blender mesh object to numpy arrays of vertices and triangulated faces.
     Uses the base mesh only (no modifiers) and is fully vectorized.
@@ -53,7 +54,7 @@ def mesh2np(mesh_obj: bpy.types.Object) -> Tuple[np.ndarray, np.ndarray]:
 
 
 def mesh2tensor(
-    mesh_obj: bpy.types.Object, device: torch.device, dtype: torch.dtype = torch.float32
+    mesh_obj: Object, device: torch.device, dtype: torch.dtype = torch.float32
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     V, F = mesh2np(mesh_obj)
     return torch.tensor(V, device=device, dtype=dtype), torch.tensor(
@@ -61,7 +62,7 @@ def mesh2tensor(
     )
 
 
-def vg2np(mesh_obj: bpy.types.Object, group_name: str) -> Tuple[np.ndarray, np.ndarray]:
+def vg2np(mesh_obj: Object, group_name: str) -> Tuple[np.ndarray, np.ndarray]:
     if mesh_obj.type != "MESH":
         raise ValueError("Object must be a mesh.")
 
@@ -107,7 +108,7 @@ def vg2np(mesh_obj: bpy.types.Object, group_name: str) -> Tuple[np.ndarray, np.n
 
 
 def vg2tensor(
-    mesh_obj: bpy.types.Object,
+    mesh_obj: Object,
     group_name: str,
     device: torch.device,
     dtype: torch.dtype = torch.float32,
@@ -119,7 +120,7 @@ def vg2tensor(
     return weights, torch.tensor(idx, device=device, dtype=torch.long)
 
 
-def vn2np(mesh_obj: bpy.types.Object) -> Tuple[np.ndarray, np.ndarray]:
+def vn2np(mesh_obj: Object) -> Tuple[np.ndarray, np.ndarray]:
     """
     Return vertex normals from a Blender mesh as NumPy arrays.
     Uses the base mesh only (no modifiers).
@@ -134,12 +135,12 @@ def vn2np(mesh_obj: bpy.types.Object) -> Tuple[np.ndarray, np.ndarray]:
 
 
 def vn2tensor(
-    mesh_obj: bpy.types.Object, device: torch.device, dtype: torch.dtype = torch.float32
+    mesh_obj: Object, device: torch.device, dtype: torch.dtype = torch.float32
 ) -> torch.Tensor:
     return torch.tensor(vn2np(mesh_obj), device=device, dtype=dtype)
 
 
-def fn2np(mesh_obj: bpy.types.Object) -> torch.Tensor:
+def fn2np(mesh_obj: Object) -> torch.Tensor:
     """
     Return face normals from a Blender mesh as NumPy arrays.
     Uses the base mesh only (no modifiers).
@@ -157,12 +158,12 @@ def fn2np(mesh_obj: bpy.types.Object) -> torch.Tensor:
 
 
 def fn2tensor(
-    mesh_obj: bpy.types.Object, device: torch.device, dtype: torch.dtype = torch.float32
+    mesh_obj: Object, device: torch.device, dtype: torch.dtype = torch.float32
 ) -> torch.Tensor:
     return torch.tensor(fn2np(mesh_obj), device=device, dtype=dtype)
 
 
-def e2np(mesh_obj: bpy.types.Object) -> np.ndarray:
+def e2np(mesh_obj: Object) -> np.ndarray:
     """
     Return triangulated mesh edges as a NumPy array of vertex index pairs.
     Each edge comes from the mesh's triangulated faces.
@@ -192,6 +193,60 @@ def e2np(mesh_obj: bpy.types.Object) -> np.ndarray:
 
 
 def e2tensor(
-    mesh_obj: bpy.types.Object, device: torch.device, dtype: torch.dtype = torch.float32
+    mesh_obj: Object, device: torch.device, dtype: torch.dtype = torch.float32
 ) -> torch.Tensor:
     return torch.tensor(e2np(mesh_obj), device=device, dtype=dtype)
+
+
+def uv2tensor(mesh_obj: Object, uv_map: str, device: torch.device):
+    """
+    Extract per-loop UV coordinates and corresponding vertex indices as tensors.
+
+    Returns:
+        uv_idx : (L,) long tensor  → vertex index per loop
+        uv_co  : (L, 2) float tensor → UV coordinate per loop
+    """
+    mesh = mesh_obj.data
+    uv_layer = mesh.uv_layers.get(uv_map)
+    if uv_layer is None:
+        raise ValueError(
+            f"'{uv_map}' is not a valid UV layer/map for object '{mesh_obj.name}'"
+        )
+
+    L = len(mesh.loops)
+    uv_idx = torch.empty(L, dtype=torch.long, device=device)
+    uv_co = torch.empty((L, 2), dtype=torch.float32, device=device)
+
+    # Fill arrays
+    for li, loop in enumerate(mesh.loops):
+        uv_idx[li] = loop.vertex_index
+        uv_co[li] = uv_layer.data[li].uv
+
+    return uv_idx, uv_co
+
+
+def img2tensor(img: Image, device: torch.device) -> ImageTensor:
+    arr = np.empty(len(img.pixels), dtype=np.float32)
+    img.pixels.foreach_get(arr)  # fast bulk copy
+    arr = torch.from_numpy(arr).view(1, 4, img.size[1], img.size[0]).to(device)
+    return ImageTensor.from_tensor(arr, device=device)
+
+
+def tensor2img(tensor: ImageTensor, name: Union[str, List[str]]) -> List[Image]:
+    B, C, H, W = tensor.shape
+    if isinstance(name, str):
+        name = [name]
+    if len(name) != B:
+        raise ValueError(
+            f"The number of names should match the number of images.\nNames: {len(name)},\nImages: {B}"
+        )
+    imgs = []
+    for batch in range(B):
+        img_data = tensor[batch].permute(1, 2, 0).cpu().numpy().ravel()
+        img = bpy.data.images.new(
+            name=name[batch], width=W, height=H, alpha=C == 4, float_buffer=True
+        )
+        img.pixels.foreach_set(img_data)
+        img.update()
+        imgs.append(img)
+    return imgs

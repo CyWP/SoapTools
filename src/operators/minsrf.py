@@ -3,7 +3,7 @@ import torch
 
 from bpy.types import Context
 
-from ..utils.blend_data.data_ops import (
+from ..utils.blend_data.scene import (
     duplicate_mesh_object,
     link_to_same_scene_collections,
 )
