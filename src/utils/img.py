@@ -118,7 +118,21 @@ class ImageTensor(Tensor):
             return [Image.fromarray(i) for i in imgs]
         return Image.fromarray(imgs)
 
-    def uv_sample(self, uv_idx: torch.Tensor, uv_co: torch.Tensor):
+    def R(self) -> ImageTensor:
+        return self[:, 0, :, :].unsqueeze(1)
+
+    def G(self) -> ImageTensor:
+        return self[:, 1, :, :].unsqueeze(1)
+
+    def B(self) -> ImageTensor:
+        return self[:, 2, :, :].unsqueeze(1)
+
+    def BW(self, alpha=False) -> ImageTensor:
+        if alpha:
+            return self.mean(dim=1, keepdim=True)
+        return self[:, :3, :, :].mean(dim=1, keepdim=True)
+
+    def uv_sample(self, uv_idx: torch.Tensor, uv_co: torch.Tensor) -> torch.Tensor:
         """
         Vertex-based bilinear texture sampling and aggregation.
 
@@ -185,5 +199,5 @@ class ImageTensor(Tensor):
 
         # Normalize by frequency
         sampled = sampled / freqs.view(1, nV, 1)
-
-        return sampled
+        print("SAMPLED", sampled, sampled.shape)
+        return sampled.squeeze()

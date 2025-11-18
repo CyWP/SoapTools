@@ -7,7 +7,7 @@ from typing import Tuple
 class SparseTensor:
     """
     Class that holds csr and coo representation of same matrix.
-    Only used when necessary given the duplication.
+    Only used when necessary, given the duplication.
     """
 
     def __init__(self, M: torch.Tensor):
@@ -54,11 +54,15 @@ class SparseTensor:
         self.coo.coalesce()
 
     def eigs(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        return torch.lobpcg(self.coo)
+        return torch.lobpcg(self.coo, method="ortho")
 
     def is_spd(self) -> bool:
-        eigvals, eigvecs = self.eigs()
-        return eigvals.min().item() >= 0
+        with torch.no_grad():
+            try:
+                eigvals, eigvecs = self.eigs()
+                return eigvals.min().item() >= 0
+            except:
+                return False
 
 
 def sparse_cotan_laplacian(

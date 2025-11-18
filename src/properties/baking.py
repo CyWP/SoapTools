@@ -6,12 +6,10 @@ from bpy.props import (
     EnumProperty,
 )
 from bpy.types import PropertyGroup, Image, Object
-from typing import Union
 
-from ..utils.blend_data.bridges import img2tensor, uv2tensor
-from ..utils.blend_data.scene import material_items, bake_material
-from ..utils.blend_data.uv import uv_map_items
-from ..utils.img import ImageTensor
+from ..utils.blend_data.blendtorch import BlendTorch
+from ..utils.blend_data.enums import BlendEnums
+from ..utils.blend_data.scene import bake_material
 
 BAKE_CHANNELS = [
     ("DIFFUSE", "Diffuse", ""),
@@ -25,12 +23,12 @@ class BakingSettings(PropertyGroup):
 
     uv_map: EnumProperty(
         name="UV Map",
-        items=uv_map_items,
+        items=BlendEnums.uv_maps,
         description="Destination UV map for the baking process.",
     )  # type:ignore
     material: EnumProperty(
         name="Material",
-        items=material_items,
+        items=BlendEnums.materials,
         description="Material for which seelcted channel will be baked.",
     )  # type: ignore
     height: IntProperty(
@@ -85,6 +83,6 @@ class BakingSettings(PropertyGroup):
     def get_map(
         self, obj: Object, device: torch.device, pack: bool = False
     ) -> torch.Tensor:
-        img = img2tensor(self.get_baked(obj, pack=pack), device)
-        uv_idx, uv_co = uv2tensor(obj, self.uv_map, device)
+        img = BlendTorch.img2tensor(self.get_baked(obj, pack=pack), device)
+        uv_idx, uv_co = BlendTorch.uv2tensor(obj, self.uv_map, device)
         return img.uv_sample(uv_idx, uv_co)

@@ -4,11 +4,11 @@ import torch
 from bpy.types import Context
 
 
-class MESH_OT_BakeChannel(bpy.types.Operator):
-    bl_idname = "soap.bake"
-    bl_label = "SoapTools: Bake material"
+class MESH_OT_ImageToVG(bpy.types.Operator):
+    bl_idname = "soap.img2vg"
+    bl_label = "SoapTools: Image to vertex group"
     bl_icon = "NODE_MATERIAL"
-    bl_description = "Bake one of a material's output channels."
+    bl_description = "Project an Image to a vertex group using a UV map."
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
@@ -24,11 +24,11 @@ class MESH_OT_BakeChannel(bpy.types.Operator):
 
     def execute(self, context: Context):
         obj = context.active_object
-        settings = context.scene.soap_settings.bake
-        settings.get_baked(obj, pack=True)
+        settings = context.scene.soap_settings.imgmap
+        settings.create_vertex_group(obj, torch.device("cpu"))
         return {"FINISHED"}
 
     def draw(self, context: Context):
         layout = self.layout
-        settings = context.scene.soap_settings.bake
+        settings = context.scene.soap_settings.imgmap
         settings.draw(layout)

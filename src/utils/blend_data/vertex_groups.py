@@ -5,14 +5,6 @@ import torch
 from bpy.types import Object
 
 
-def vertex_group_items(self, context):
-    obj = context.active_object
-    if obj and obj.type == "MESH" and obj.vertex_groups:
-        data = [(vg.name, vg.name, "") for vg in obj.vertex_groups]
-        return [("NONE", "None", ""), *data]
-    return [("NONE", "Vertex Group", "")]
-
-
 def get_vertex_group_copy(
     obj: bpy.types.Object, vertex_group: str, new_name: str, caller=None
 ):

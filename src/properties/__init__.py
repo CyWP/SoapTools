@@ -16,3 +16,4 @@ from .svm import (
 from .v_group import SimpleVertexGroup
 from .solver import SolverSettings
 from .baking import BakingSettings
+from .img import ImageSettings, ImageMappingSettings

@@ -4,14 +4,6 @@ from bpy.types import Context, Object, Image
 from typing import List, Tuple
 
 
-def material_items(self, context: Context) -> List[Tuple]:
-    """Return all materials in the scene for an EnumProperty."""
-    items = [("NONE", "None", "")]
-    for mat in bpy.data.materials:
-        items.append((mat.name, mat.name, f"Material: {mat.name}"))
-    return items
-
-
 def duplicate_mesh_object(obj: bpy.types.Object, deep: bool = True) -> bpy.types.Object:
     """
     Fully duplicate a mesh object so that it has its own independent mesh datablock,

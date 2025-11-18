@@ -12,20 +12,11 @@ from bpy.props import (
 from bpy.types import PropertyGroup, UIList, Operator, Object
 from typing import Optional
 
-from ..utils.blend_data.bridges import vg2tensor
-from ..utils.blend_data.vertex_groups import vertex_group_items, harden_vertex_group
-from ..utils.math.remap import (
-    remap_linear,
-    remap_invert,
-    remap_fill,
-    remap_gaussian,
-    remap_pulse,
-    remap_saw,
-    remap_sine,
-    remap_smooth,
-    remap_step,
-    remap_threshold,
-)
+from .img import ImageMappingSettings
+from ..utils.blend_data.blendtorch import BlendTorch
+from ..utils.blend_data.enums import BlendEnums
+from ..utils.blend_data.vertex_groups import harden_vertex_group
+from ..utils.math.remap import Remap
 
 
 MAPPINGS = [
@@ -110,25 +101,25 @@ class RemappingMode(PropertyGroup):
     def process(self, x: torch.Tensor) -> torch.Tensor:
         map_type = self.map_type
         if map_type == "LINEAR":
-            return remap_linear(x)
+            return Remap.linear(x)
         if map_type == "INVERT":
-            return remap_invert(x)
+            return Remap.invert(x)
         if map_type == "FILL":
-            return remap_fill(x)
+            return Remap.fill(x)
         if map_type == "SMOOTH":
-            return remap_smooth(x)
+            return Remap.smooth(x)
         if map_type == "THRESHOLD":
-            return remap_threshold(x, self.threshold)
+            return Remap.threshold(x, self.threshold)
         if map_type == "GAUSSIAN":
-            return remap_gaussian(x, self.mean, self.variance)
+            return Remap.gaussian(x, self.mean, self.variance)
         if map_type == "STEP":
-            return remap_step(x, self.steps)
+            return Remap.step(x, self.steps)
         if map_type == "SINE":
-            return remap_sine(x, self.period, self.phase)
+            return Remap.sine(x, self.period, self.phase)
         if map_type == "SAW":
-            return remap_saw(x, self.period, self.phase)
+            return Remap.saw(x, self.period, self.phase)
         if map_type == "PULSE":
-            return remap_pulse(x, self.period, self.phase)
+            return Remap.pulse(x, self.period, self.phase)
         raise ValueError(f"'{map_type}' is an unrecognized map type.")
 
 
@@ -212,7 +203,7 @@ class ScalarVertexMapSettings(PropertyGroup):
     )  # type:ignore
     group: EnumProperty(
         name="Vertex group",
-        items=vertex_group_items,
+        items=BlendEnums.vertex_groups,
         default=0,
     )  # type: ignore
     strict: BoolProperty(
@@ -221,24 +212,35 @@ class ScalarVertexMapSettings(PropertyGroup):
         default=False,
     )  # type: ignore
     remap_stack: PointerProperty(type=RemappingStack)  # type: ignore
+    map_source: EnumProperty(
+        name="Source",
+        items=[
+            ("VERTEX GROUP", "Vertex Group", ""),
+            ("IMAGE", "Image", ""),
+        ],
+        description="Source for creating scalar value map.",
+    )  # type:ignore
+    img_map: PointerProperty(type=ImageMappingSettings)  # type:ignore
 
     def get_field(self, obj: Object, device: torch.device) -> Optional[torch.Tensor]:
         nV = len(obj.data.vertices)
         use_range = self.val_mode == "RANGE"
         if self.strict and self.group != "NONE":
             harden_vertex_group(obj, self.group)
-        field, idx = (
-            vg2tensor(obj, self.group, device=device)
-            if self.group != "NONE"
-            else (
-                torch.ones((nV,), device=device),
-                None,
+        if self.map_source == "VERTEX_GROUP":
+            field, idx = (
+                BlendTorch.vg2tensor(obj, self.group, device=device)
+                if self.group != "NONE"
+                else (
+                    torch.ones((nV,), device=device),
+                    None,
+                )
             )
-        )
+        else:
+            field = self.img_map.get_map(obj, device)
         field = self.remap_stack.process(field)
         r0, r1, val = float(self.r_0), float(self.r_1), float(self.val)
         field = (r1 - r0) * field + r0 if use_range else val * field
-        print("FIELD", self.group, field)
         return field
 
     def draw(self, layout, name: str):
@@ -253,19 +255,30 @@ class ScalarVertexMapSettings(PropertyGroup):
         else:
             row.prop(self, "val")
         row = layout.row(align=True)
-        if len(self.remap_stack.modes) < 1:
-            left = row.split(factor=0.5)
-            left.prop(self, "group", text="")
-            right = left.row()
-            right.prop(self, "strict")
-            self.remap_stack.draw(right)
+        row.prop(self, "map_source", expand=True)
+        if self.map_source == "VERTEX GROUP":
+            if len(self.remap_stack.modes) < 1:
+                left = row.split(factor=0.5)
+                left.prop(self, "group", text="")
+                right = left.row()
+                right.prop(self, "strict")
+                self.remap_stack.draw(right)
+            else:
+                left = row.split(factor=0.8)
+                left.prop(self, "group", text="")
+                right = left.row()
+                right.prop(self, "strict")
+                row = layout.row()
+                row.alignment = "CENTER"
+                row.enabled = False
+                row.label(text="Remapping Functions")
+                self.remap_stack.draw(layout)
         else:
-            left = row.split(factor=0.8)
-            left.prop(self, "group", text="")
-            right = left.row()
-            right.prop(self, "strict")
             row = layout.row()
-            row.alignment = "CENTER"
-            row.enabled = False
-            row.label(text="Remapping Functions")
+            self.img_map.draw(layout)
+            if len(self.remap_stack.modes) < 1:
+                row = layout.row()
+                row.alignment = "CENTER"
+                row.enabled = False
+                row.label(text="Remapping Functions")
             self.remap_stack.draw(layout)

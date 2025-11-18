@@ -2,11 +2,8 @@ import bpy
 
 from bpy.types import Context
 
-from ..utils.blend_data.vertex_groups import (
-    harden_vertex_group,
-    get_vertex_group_copy,
-    vertex_group_items,
-)
+from ..utils.blend_data.enums import BlendEnums
+from ..utils.blend_data.vertex_groups import harden_vertex_group, get_vertex_group_copy
 
 
 class MESH_OT_HardenVGroup(bpy.types.Operator):

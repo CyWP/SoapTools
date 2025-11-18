@@ -5,11 +5,11 @@ from bpy.props import PointerProperty, EnumProperty, IntProperty, BoolProperty
 from bpy.types import PropertyGroup
 
 from .baking import BakingSettings
+from .img import ImageMappingSettings
 from .solver import SolverSettings
 from .svm import ScalarVertexMapSettings
 from .v_group import SimpleVertexGroup
-from ..utils.blend_data.mesh_obj import modifier_items
-from ..utils.blend_data.vertex_groups import vertex_group_items
+from ..utils.blend_data.enums import BlendEnums
 
 
 class MinSrfSettings(PropertyGroup):
@@ -17,7 +17,7 @@ class MinSrfSettings(PropertyGroup):
     apply_after: EnumProperty(
         name="Apply_after",
         description="Applies modifier and all prior ones in stack before transforming, preserves ones after.",
-        items=modifier_items,
+        items=BlendEnums.modifiers,
     )  # type:ignore
     fixed_verts: PointerProperty(type=SimpleVertexGroup)  # type: ignore
 
@@ -27,7 +27,7 @@ class FlationSettings(PropertyGroup):
     apply_after: EnumProperty(
         name="Apply_after",
         description="Applies modifier and all prior ones in stack before transforming, preserves ones after.",
-        items=modifier_items,
+        items=BlendEnums.modifiers,
     )  # type:ignore
     active_constraint: EnumProperty(
         name="Constraint",
@@ -47,7 +47,9 @@ class FlationSettings(PropertyGroup):
 
 
 class SoftenVertexGroupSettings(PropertyGroup):
-    group: EnumProperty(name="Vertex Group", items=vertex_group_items)  # type:ignore
+    group: EnumProperty(
+        name="Vertex Group", items=BlendEnums.vertex_groups
+    )  # type:ignore
     rings: IntProperty(
         name="Rings", description="Topologoical smoothing distance", min=1, default=5
     )  # type:ignore
@@ -60,7 +62,9 @@ class SoftenVertexGroupSettings(PropertyGroup):
 
 
 class HardenVertexGroupSettings(PropertyGroup):
-    group: EnumProperty(name="Vertex Group", items=vertex_group_items)  # type:ignore
+    group: EnumProperty(
+        name="Vertex Group", items=BlendEnums.vertex_groups
+    )  # type:ignore
     copy: BoolProperty(
         name="Copy", description="Apply to copy", default=True
     )  # type:ignore
@@ -72,3 +76,4 @@ class GlobalSettings(PropertyGroup):
     vghard: PointerProperty(type=HardenVertexGroupSettings)  # type:ignore
     vgsoft: PointerProperty(type=SoftenVertexGroupSettings)  # type:ignore
     bake: PointerProperty(type=BakingSettings)  # type:ignore
+    imgmap: PointerProperty(type=ImageMappingSettings)  # type:ignore
