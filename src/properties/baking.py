@@ -79,7 +79,7 @@ class BakingSettings(PropertyGroup):
             self.material,
             self.width,
             self.height,
-            bake_type="EMIT",
+            bake_type=self.channel,
         )
 
     def get_map(

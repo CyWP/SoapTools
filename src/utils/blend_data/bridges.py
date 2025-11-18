@@ -2,7 +2,7 @@ import bpy
 import numpy as np
 import torch
 
-from bpy.types import Object, Image
+from bpy.types import Object, Image, Context
 from itertools import chain
 from typing import Tuple, List, Union
 
@@ -32,8 +32,27 @@ def np2mesh(context, V: np.ndarray, F: np.ndarray, name: str) -> Object:
     return obj
 
 
-def tensor2mesh(context, V: torch.Tensor, F: torch.Tensor, name: str) -> Object:
-    return np2mesh(context, V.cpu().numpy(), F.cpu().numpy(), name)
+def tensor2mesh(
+    context: Context, V: torch.Tensor, F: torch.Tensor, name: str
+) -> Object:
+    if V.shape[1] != 3:
+        raise ValueError("V must have shape (n, 3).")
+    if F.shape[1] not in (3, 4):
+        raise ValueError("F must have shape (m, 3) or (m, 4).")
+    V = V.cpu().numpy()
+    F = F.cpu().numpy()
+    # Create a new mesh
+    mesh = bpy.data.meshes.new(name)
+    obj = bpy.data.objects.new(name, mesh)
+    # Link object to the active collection
+    collection = context.collection
+    collection.objects.link(obj)
+    # Create the mesh from the vertex and face data
+    mesh.from_pydata(V.tolist(), [], F.tolist())
+    # Update mesh with calculated normals and topology
+    mesh.update()
+
+    return obj
 
 
 def mesh2np(mesh_obj: Object) -> Tuple[np.ndarray, np.ndarray]:
