@@ -37,17 +37,17 @@ class MESH_OT_MinimalSurface(bpy.types.Operator):
 
         box = layout.box()
         row = box.row()
+        row.alignment = "CENTER"
+        row.enabled = False
+        row.label(text="Settings")
+        row = box.row()
         row.prop(op_set, "apply_after")
         row = box.row()
         left = row.split(factor=0.8)
         left.prop(op_set.fixed_verts, "group", text="Pinned")
         right = left.row()
         right.prop(op_set.fixed_verts, "strict")
-        row = layout.row()
-        row.alignment = "CENTER"
-        row.label(text="Solver")
-        box = layout.box()
-        op_set.solver.draw(box)
+        op_set.solver.draw(layout)
 
     def execute(self, context: Context):
         obj = context.active_object

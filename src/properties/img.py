@@ -96,10 +96,21 @@ class ImageMappingSettings(PropertyGroup):
     )  # type:ignore
 
     def draw(self, layout):
-        row = layout.row()
+        box = layout.box()
+        row = box.row()
+        row.alignment = "CENTER"
+        row.enabled = False
+        row.label(text="Image Mapping")
+        row = box.row()
         row.prop(self, "uv_map")
-        row.prop(self, "channel")
-        self.img.draw(layout)
+        row = box.row()
+        row.prop(self, "channel", expand=True)
+        box = layout.box()
+        row = box.row()
+        row.alignment = "CENTER"
+        row.enabled = False
+        row.label(text="Image Source")
+        self.img.draw(box)
 
     def get_map(self, obj: Object, device: torch.device) -> torch.Tensor:
         if self.uv_map == "NONE":

@@ -53,15 +53,13 @@ class BakingSettings(PropertyGroup):
     def draw(self, layout):
         row = layout.row()
         row.prop(self, "uv_map")
+        row = layout.row()
         row.prop(self, "material")
         row = layout.row()
-        left = row.split(factor=0.24)
-        left.prop(self, "height", text="H")
-        mid = left.row()
-        mid = mid.split(factor=0.33)
-        mid.prop(self, "width", text="W")
-        right = mid.row()
-        right.prop(self, "channel")
+        row.prop(self, "channel", expand=True)
+        row = layout.row()
+        row.prop(self, "height")
+        row.prop(self, "width")
 
     def validate_input(self):
         if self.uv_map == "NONE":

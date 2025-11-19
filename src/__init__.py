@@ -10,9 +10,11 @@ from .operators import (
     MESH_OT_SelectBoundary,
     MESH_OT_BakeChannel,
     MESH_OT_ImageToVG,
+    MESH_OT_RemapVGroup,
 )
 from .properties import (
     GlobalSettings,
+    RemapVertexGroupSettings,
     MinSrfSettings,
     FlationSettings,
     ImageSettings,
@@ -39,6 +41,7 @@ classes = [
     MESH_OT_SelectBoundary,
     MESH_OT_BakeChannel,
     MESH_OT_ImageToVG,
+    MESH_OT_RemapVGroup,
     BakingSettings,
     ImageSettings,
     ImageMappingSettings,
@@ -54,6 +57,7 @@ classes = [
     REMAP_OT_AddModeOperator,
     MinSrfSettings,
     FlationSettings,
+    RemapVertexGroupSettings,
     GlobalSettings,
 ]
 

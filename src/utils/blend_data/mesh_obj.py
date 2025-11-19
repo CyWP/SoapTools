@@ -1,8 +1,7 @@
 import bpy
 import bmesh
-import numpy as np
 
-from bpy.types import Object, Context, Image
+from bpy.types import Object
 from typing import List
 
 from .vertex_groups import harden_vertex_group

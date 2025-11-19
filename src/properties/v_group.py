@@ -30,14 +30,16 @@ class SimpleVertexGroup(PropertyGroup):
         layout.prop(self, "strict")
 
     def get_group(
-        self, obj: Object, device: torch.device
+        self, obj: Object, device: torch.device, none_valid=True
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         nV = len(obj.data.vertices)
         if self.group == "NONE":
-            return (
-                torch.ones((nV,), device=device),
-                torch.tensor([], device=device, dtype=torch.long),
-            )
+            if none_valid:
+                return (
+                    torch.ones((nV,), device=device),
+                    torch.arange(0, nV, 1, dtype=torch.long, device=device),
+                )
+            raise ValueError("A vertex group must be selected.")
         if self.strict:
             harden_vertex_group(obj, self.group)
         return BlendTorch.vg2tensor(obj, self.group, device=device)

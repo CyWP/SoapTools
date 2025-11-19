@@ -15,7 +15,7 @@ class BlendEnums:
         if obj and obj.type == "MESH" and obj.modifiers:
             data = [(str(i + 1), mod.name, "") for i, mod in enumerate(obj.modifiers)]
             return [("0", "None", ""), *data]
-        return [("0", "Modifier", "")]
+        return [("0", "None", "")]
 
     @staticmethod
     def materials(caller: Any, context: Context) -> List[Tuple]:
@@ -40,4 +40,4 @@ class BlendEnums:
         if obj and obj.type == "MESH" and obj.vertex_groups:
             data = [(vg.name, vg.name, "") for vg in obj.vertex_groups]
             return [("NONE", "None", ""), *data]
-        return [("NONE", "Vertex Group", "")]
+        return [("NONE", "None", "")]

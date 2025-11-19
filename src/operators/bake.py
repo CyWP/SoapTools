@@ -31,4 +31,4 @@ class MESH_OT_BakeChannel(bpy.types.Operator):
     def draw(self, context: Context):
         layout = self.layout
         settings = context.scene.soap_settings.bake
-        settings.draw(layout)
+        settings.draw(layout.box())

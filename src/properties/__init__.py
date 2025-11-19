@@ -2,6 +2,7 @@ from .settings import (
     GlobalSettings,
     MinSrfSettings,
     FlationSettings,
+    RemapVertexGroupSettings,
     SoftenVertexGroupSettings,
     HardenVertexGroupSettings,
 )

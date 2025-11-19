@@ -38,18 +38,23 @@ class MESH_OT_Inflation(Operator):
 
         box = layout.box()
         row = box.row()
+        row.alignment = "CENTER"
+        row.enabled = False
+        row.label(text="Settings")
+        row = box.row()
         left = row.split(factor=0.8)
         left.prop(op_set.fixed_verts, "group", text="Pinned")
         right = left.row()
         right.prop(op_set.fixed_verts, "strict")
         row = box.row()
         row.prop(op_set, "apply_after")
-        row = layout.row()
-        row.alignment = "CENTER"
-        row.label(text="Constraints")
-        row = layout.row()
-        row.prop(op_set, "active_constraint", expand=True)
         box = layout.box()
+        row = box.row()
+        row.alignment = "CENTER"
+        row.enabled = False
+        row.label(text="Constraints")
+        row = box.row()
+        row.prop(op_set, "active_constraint", expand=True)
         active = op_set.active_constraint
         if active == "DISPLACEMENT":
             op_set.displacement.draw(box, "Displacement")
@@ -61,11 +66,7 @@ class MESH_OT_Inflation(Operator):
             op_set.beta.draw(box, "Beta")
         else:
             raise ValueError(f"'{active} is an invalid constraint.")
-        row = layout.row()
-        row.alignment = "CENTER"
-        row.label(text="Solver")
-        box = layout.box()
-        op_set.solver.draw(box)
+        op_set.solver.draw(layout)
 
     def execute(self, context: Context):
         obj = context.active_object

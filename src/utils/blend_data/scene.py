@@ -92,14 +92,19 @@ def bake_material(
     bpy.context.scene.render.engine = "CYCLES"
 
     # Bake settings
-    bpy.context.scene.cycles.bake_type = bake_type
+    cycles_settings = bpy.context.scene.cycles
+    cycles_settings.bake_type = bake_type
     if bake_type == "DIFFUSE":
-        bpy.context.scene.cycles.use_bake_direct = False
-        bpy.context.scene.cycles.use_bake_indirect = False
-        bpy.context.scene.cycles.use_bake_color = True
+        cycles_settings.use_bake_direct = False
+        cycles_settings.use_bake_indirect = False
+        cycles_settings.cycles.use_bake_color = True
 
-    # Perform bake
-    bpy.ops.object.bake(type=bake_type)
+    try:
+        # Perform bake
+        bpy.ops.object.bake(type=bake_type)
+    except:
+        cycles_settings.device = "CPU"
+        bpy.ops.object.bake(type=bake_type)
 
     # Remove temporary node
     nodes.remove(tex_node)

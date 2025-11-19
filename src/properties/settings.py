@@ -7,7 +7,7 @@ from bpy.types import PropertyGroup
 from .baking import BakingSettings
 from .img import ImageMappingSettings
 from .solver import SolverSettings
-from .svm import ScalarVertexMapSettings
+from .svm import ScalarVertexMapSettings, RemappingStack
 from .v_group import SimpleVertexGroup
 from ..utils.blend_data.enums import BlendEnums
 
@@ -15,7 +15,7 @@ from ..utils.blend_data.enums import BlendEnums
 class MinSrfSettings(PropertyGroup):
     solver: PointerProperty(type=SolverSettings)  # type:ignore
     apply_after: EnumProperty(
-        name="Apply_after",
+        name="Apply after",
         description="Applies modifier and all prior ones in stack before transforming, preserves ones after.",
         items=BlendEnums.modifiers,
     )  # type:ignore
@@ -25,7 +25,7 @@ class MinSrfSettings(PropertyGroup):
 class FlationSettings(PropertyGroup):
     solver: PointerProperty(type=SolverSettings)  # type: ignore
     apply_after: EnumProperty(
-        name="Apply_after",
+        name="Apply after",
         description="Applies modifier and all prior ones in stack before transforming, preserves ones after.",
         items=BlendEnums.modifiers,
     )  # type:ignore
@@ -34,9 +34,9 @@ class FlationSettings(PropertyGroup):
         description="Constraint to be currently edited",
         items=[
             ("DISPLACEMENT", "Displacement", ""),
-            ("LAPLACIAN", "Laplacian", ""),
-            ("ALPHA", "Alpha", ""),
-            ("BETA", "Beta", ""),
+            ("LAPLACIAN", "Smoothness", ""),
+            ("ALPHA", "Normal", ""),
+            ("BETA", "Tangent", ""),
         ],
     )  # type:ignore
     fixed_verts: PointerProperty(type=SimpleVertexGroup)  # type: ignore
@@ -70,6 +70,11 @@ class HardenVertexGroupSettings(PropertyGroup):
     )  # type:ignore
 
 
+class RemapVertexGroupSettings(PropertyGroup):
+    remap: PointerProperty(type=RemappingStack)  # type:ignore
+    group: PointerProperty(type=SimpleVertexGroup)  # type:ignore
+
+
 class GlobalSettings(PropertyGroup):
     minsrf: PointerProperty(type=MinSrfSettings)  # type: ignore
     flation: PointerProperty(type=FlationSettings)  # type: ignore
@@ -77,3 +82,4 @@ class GlobalSettings(PropertyGroup):
     vgsoft: PointerProperty(type=SoftenVertexGroupSettings)  # type:ignore
     bake: PointerProperty(type=BakingSettings)  # type:ignore
     imgmap: PointerProperty(type=ImageMappingSettings)  # type:ignore
+    vgremap: PointerProperty(type=RemapVertexGroupSettings)  # type:ignore

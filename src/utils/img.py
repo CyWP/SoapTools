@@ -199,5 +199,4 @@ class ImageTensor(Tensor):
 
         # Normalize by frequency
         sampled = sampled / freqs.view(1, nV, 1)
-        print("SAMPLED", sampled, sampled.shape)
         return sampled.squeeze()

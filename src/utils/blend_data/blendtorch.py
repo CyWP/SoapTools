@@ -255,11 +255,14 @@ class BlendTorch:
         return uv_idx, uv_co
 
     @staticmethod
-    def img2tensor(img: Image, device: torch.device) -> ImageTensor:
-        arr = np.empty(len(img.pixels), dtype=np.float32)
+    def img2tensor(img: bpy.types.Image, device: torch.device):
+        w, h = img.size
+        arr = np.empty(w * h * 4, dtype=np.float32)
         img.pixels.foreach_get(arr)
-        arr = torch.from_numpy(arr).view(1, 4, img.size[1], img.size[0]).to(device)
-        return ImageTensor.from_tensor(arr, device=device)
+        arr = arr.reshape((h, w, 4))
+        # arr = np.flip(arr, axis=0).copy()
+        tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0).to(device)
+        return ImageTensor.from_tensor(tensor, device=device)
 
     @staticmethod
     def tensor2img(tensor: ImageTensor, name: Union[str, List[str]]) -> List[Image]:
