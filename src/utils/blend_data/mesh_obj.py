@@ -1,8 +1,7 @@
 import bpy
 import bmesh
-import numpy as np
 
-from bpy.types import Object, Context
+from bpy.types import Object
 from typing import List
 
 from .vertex_groups import harden_vertex_group
@@ -38,37 +37,6 @@ def apply_first_n_modifiers(
     finally:
         # Restore previous active object
         bpy.context.view_layer.objects.active = prev_active
-
-
-def modifier_items(caller, context: Context):
-    obj = context.active_object
-    if obj and obj.type == "MESH" and obj.modifiers:
-        data = [(str(i + 1), mod.name, "") for i, mod in enumerate(obj.modifiers)]
-        return [("0", "None", ""), *data]
-    return [("0", "Modifier", "")]
-
-
-def update_mesh_vertices(obj: Object, V: np.ndarray):
-    """Update the vertex positions of an existing mesh object."""
-    if not isinstance(obj, Object) or obj.type != "MESH":
-        raise TypeError("obj must be a Blender mesh object")
-    if V.shape[1] != 3:
-        raise ValueError("V must have shape (n, 3)")
-
-    mesh = obj.data
-    n_verts = len(mesh.vertices)
-    if V.shape[0] != n_verts:
-        raise ValueError(
-            f"Vertex count mismatch: mesh has {n_verts}, array has {V.shape[0]}"
-        )
-
-    # Ensure float32 for speed
-    if V.dtype != np.float32:
-        V = V.astype(np.float32)
-
-    # Fast update via foreach_set
-    mesh.vertices.foreach_set("co", V.ravel())
-    mesh.update()
 
 
 def select_boundary(obj: Object):

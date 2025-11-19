@@ -77,15 +77,20 @@ class SolverSettings(PropertyGroup):
         )
 
     def draw(self, layout):
+        box = layout.box()
+        row = box.row()
+        row.alignment = "CENTER"
+        row.enabled = False
+        row.label(text="Solver")
         solver = self.solver
         if len(get_torch_devices()) > 1:
-            row = layout.row()
+            row = box.row()
             row.prop(self, "device", expand=True)
-        row = layout.row()
+        row = box.row()
         row.prop(self, "solver")
         if solver not in ("AUTO", "Direct"):
             row.prop(self, "precond")
         if solver in ("AUTO", "Conjugate Gradient", "Biconjugate Gradient", "BiCGSTAB"):
-            row = layout.row()
+            row = box.row()
             row.prop(self, "iters")
             row.prop(self, "tolerance")

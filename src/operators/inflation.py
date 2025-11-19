@@ -3,22 +3,14 @@ import torch
 
 from bpy.types import Operator, Context
 
-from ..utils.blend_data.data_ops import (
+from ..utils.blend_data.scene import (
     duplicate_mesh_object,
     link_to_same_scene_collections,
 )
-from ..utils.blend_data.bridges import mesh2tensor, vn2tensor
+from ..utils.blend_data.blendtorch import BlendTorch
 from ..utils.jobs import BackgroundJob
-from ..utils.blend_data.mesh_obj import apply_first_n_modifiers, update_mesh_vertices
+from ..utils.blend_data.mesh_obj import apply_first_n_modifiers
 from ..utils.math.problems import solve_flation
-
-
-def modifier_items(caller, context: Context):
-    obj = context.active_object
-    opts = []
-    if obj and obj.type == "MESH" and obj.modifiers:
-        opts = [(str(i + 1), mod.name, "") for i, mod in enumerate(obj.modifiers)]
-    return [("0", "None", ""), *opts]
 
 
 class MESH_OT_Inflation(Operator):
@@ -46,18 +38,23 @@ class MESH_OT_Inflation(Operator):
 
         box = layout.box()
         row = box.row()
+        row.alignment = "CENTER"
+        row.enabled = False
+        row.label(text="Settings")
+        row = box.row()
         left = row.split(factor=0.8)
         left.prop(op_set.fixed_verts, "group", text="Pinned")
         right = left.row()
         right.prop(op_set.fixed_verts, "strict")
         row = box.row()
         row.prop(op_set, "apply_after")
-        row = layout.row()
-        row.alignment = "CENTER"
-        row.label(text="Constraints")
-        row = layout.row()
-        row.prop(op_set, "active_constraint", expand=True)
         box = layout.box()
+        row = box.row()
+        row.alignment = "CENTER"
+        row.enabled = False
+        row.label(text="Constraints")
+        row = box.row()
+        row.prop(op_set, "active_constraint", expand=True)
         active = op_set.active_constraint
         if active == "DISPLACEMENT":
             op_set.displacement.draw(box, "Displacement")
@@ -69,11 +66,7 @@ class MESH_OT_Inflation(Operator):
             op_set.beta.draw(box, "Beta")
         else:
             raise ValueError(f"'{active} is an invalid constraint.")
-        row = layout.row()
-        row.alignment = "CENTER"
-        row.label(text="Solver")
-        box = layout.box()
-        op_set.solver.draw(box)
+        op_set.solver.draw(layout)
 
     def execute(self, context: Context):
         obj = context.active_object
@@ -97,8 +90,8 @@ class MESH_OT_Inflation(Operator):
             for coll in new_obj.users_collection:
                 coll.objects.unlink(new_obj)
 
-        V, F = mesh2tensor(new_obj, device=device)
-        N = vn2tensor(new_obj, device=device)
+        V, F = BlendTorch.mesh2tensor(new_obj, device=device)
+        N = BlendTorch.vn2tensor(new_obj, device=device)
         _, fixed_idx = op_set.fixed_verts.get_group(new_obj, device)
         disp_field = op_set.displacement.get_field(new_obj, device)
         laplacian_field = op_set.laplacian.get_field(new_obj, device)
@@ -130,7 +123,7 @@ class MESH_OT_Inflation(Operator):
     def modal(self, context, event):
         if event.type == "TIMER" and self._job.is_done():
             new_V = self._job.get_result()
-            update_mesh_vertices(self.new_obj, new_V.cpu().numpy())
+            BlendTorch.tensor2mesh_update(self.new_obj, new_V)
             link_to_same_scene_collections(self.original_obj, self.new_obj)
             context.window_manager.event_timer_remove(self._timer)
             self._timer = None

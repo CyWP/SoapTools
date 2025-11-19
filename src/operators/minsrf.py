@@ -1,15 +1,14 @@
 import bpy
-import torch
 
 from bpy.types import Context
 
-from ..utils.blend_data.data_ops import (
+from ..utils.blend_data.scene import (
     duplicate_mesh_object,
     link_to_same_scene_collections,
 )
-from ..utils.blend_data.bridges import mesh2tensor, vg2tensor
+from ..utils.blend_data.blendtorch import BlendTorch
 from ..utils.jobs import BackgroundJob
-from ..utils.blend_data.mesh_obj import apply_first_n_modifiers, update_mesh_vertices
+from ..utils.blend_data.mesh_obj import apply_first_n_modifiers
 from ..utils.math.problems import solve_minimal_surface
 
 
@@ -23,7 +22,7 @@ class MESH_OT_MinimalSurface(bpy.types.Operator):
     suffix: str = "_soaped"
 
     @classmethod
-    def poll(cls, context):
+    def poll(cls, context: Context):
         return True
 
     def invoke(self, context, event):
@@ -38,19 +37,19 @@ class MESH_OT_MinimalSurface(bpy.types.Operator):
 
         box = layout.box()
         row = box.row()
+        row.alignment = "CENTER"
+        row.enabled = False
+        row.label(text="Settings")
+        row = box.row()
         row.prop(op_set, "apply_after")
         row = box.row()
         left = row.split(factor=0.8)
         left.prop(op_set.fixed_verts, "group", text="Pinned")
         right = left.row()
         right.prop(op_set.fixed_verts, "strict")
-        row = layout.row()
-        row.alignment = "CENTER"
-        row.label(text="Solver")
-        box = layout.box()
-        op_set.solver.draw(box)
+        op_set.solver.draw(layout)
 
-    def execute(self, context):
+    def execute(self, context: Context):
         obj = context.active_object
         op_set = context.scene.soap_settings.minsrf
         device = op_set.solver.get_device()
@@ -72,9 +71,9 @@ class MESH_OT_MinimalSurface(bpy.types.Operator):
             for coll in new_obj.users_collection:
                 coll.objects.unlink(new_obj)
 
-        V, F = mesh2tensor(new_obj, device=device)
+        V, F = BlendTorch.mesh2tensor(new_obj, device=device)
 
-        _, idx = vg2tensor(new_obj, vg, device=device)
+        _, idx = BlendTorch.vg2tensor(new_obj, vg, device=device)
 
         self.new_obj = new_obj
         self.original_obj = obj
@@ -86,10 +85,10 @@ class MESH_OT_MinimalSurface(bpy.types.Operator):
 
         return {"RUNNING_MODAL"}
 
-    def modal(self, context, event):
+    def modal(self, context: Context, event):
         if event.type == "TIMER" and self._job.is_done():
             new_V = self._job.get_result()
-            update_mesh_vertices(self.new_obj, new_V.cpu().numpy())
+            BlendTorch.tensor2mesh_update(self.new_obj, new_V)
             link_to_same_scene_collections(self.original_obj, self.new_obj)
             context.window_manager.event_timer_remove(self._timer)
             self._timer = None
@@ -104,7 +103,7 @@ class MESH_OT_MinimalSurface(bpy.types.Operator):
             return {"FINISHED"}
         return {"PASS_THROUGH"}
 
-    def cancel(self, context):
+    def cancel(self, context: Context):
         self._job = None
         try:
             context.window_manager.event_timer_remove(self._timer)

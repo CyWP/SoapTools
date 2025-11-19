@@ -3,3 +3,6 @@ from .vghard import MESH_OT_HardenVGroup
 from .vgsoft import MESH_OT_SoftenVGroup
 from .inflation import MESH_OT_Inflation
 from .selectbound import MESH_OT_SelectBoundary
+from .bake import MESH_OT_BakeChannel
+from .img2vg import MESH_OT_ImageToVG
+from .vgremap import MESH_OT_RemapVGroup

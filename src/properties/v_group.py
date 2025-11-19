@@ -8,14 +8,15 @@ from bpy.props import (
 from bpy.types import PropertyGroup, Object
 from typing import Tuple
 
-from ..utils.blend_data.bridges import vg2tensor
-from ..utils.blend_data.vertex_groups import vertex_group_items, harden_vertex_group
+from ..utils.blend_data.blendtorch import BlendTorch
+from ..utils.blend_data.enums import BlendEnums
+from ..utils.blend_data.vertex_groups import harden_vertex_group
 
 
 class SimpleVertexGroup(PropertyGroup):
     group: EnumProperty(
         name="Vertex group",
-        items=vertex_group_items,
+        items=BlendEnums.vertex_groups,
         default=0,
     )  # type: ignore
     strict: BoolProperty(
@@ -29,14 +30,16 @@ class SimpleVertexGroup(PropertyGroup):
         layout.prop(self, "strict")
 
     def get_group(
-        self, obj: Object, device: torch.device
+        self, obj: Object, device: torch.device, none_valid=True
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         nV = len(obj.data.vertices)
         if self.group == "NONE":
-            return (
-                torch.ones((nV,), device=device),
-                torch.tensor([], device=device, dtype=torch.long),
-            )
+            if none_valid:
+                return (
+                    torch.ones((nV,), device=device),
+                    torch.arange(0, nV, 1, dtype=torch.long, device=device),
+                )
+            raise ValueError("A vertex group must be selected.")
         if self.strict:
             harden_vertex_group(obj, self.group)
-        return vg2tensor(obj, self.group, device=device)
+        return BlendTorch.vg2tensor(obj, self.group, device=device)
