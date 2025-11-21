@@ -71,6 +71,7 @@ def solve_flation(
     not_fixed = ~is_fixed
     free_idx = torch.where(not_fixed)[0]
     if len(free_idx) == 0:
+        print("nofree")
         return V
 
     assert target_offset.shape == (n,), target_offset.shape

@@ -192,6 +192,7 @@ class BlendTorch:
     @staticmethod
     def vn2tensor(mesh_obj: bpy.types.Object, device: torch.device) -> torch.Tensor:
         mesh = mesh_obj.data
+
         mesh.calc_loop_triangles()
         n_loops = len(mesh.loops)
         n_verts = len(mesh.vertices)
@@ -201,10 +202,11 @@ class BlendTorch:
         loop_vert = np.empty(n_loops, dtype=np.int32)
         mesh.loops.foreach_get("vertex_index", loop_vert)
         vert_normals = np.zeros((n_verts, 3), dtype=np.float32)
-        vert_normals = torch.from_numpy(vert_normals).to(device)
-        norms = vert_normals.norm(dim=1, keepdim=True)
+        np.add.at(vert_normals, loop_vert, loop_normals)
+        norms = np.linalg.norm(vert_normals, axis=1, keepdims=True)
         norms[norms == 0] = 1.0
-        return vert_normals / norms
+        vert_normals /= norms
+        return torch.from_numpy(vert_normals).to(device)
 
     @staticmethod
     def e2tensor(mesh_obj: Object, device: torch.device) -> torch.Tensor:

@@ -87,11 +87,13 @@ class MESH_OT_Inflation(Operator):
                 apply_after,
                 [vg_fixed] if vg_fixed_strict and vg_fixed != "NONE" else [],
             )
-            for coll in new_obj.users_collection:
-                coll.objects.unlink(new_obj)
+            # for coll in new_obj.users_collection:
+            #     coll.objects.unlink(new_obj)
 
         V, F = BlendTorch.mesh2tensor(new_obj, device=device)
         N = BlendTorch.vn2tensor(new_obj, device=device)
+        print("V", V)
+        print("N", N)
         _, fixed_idx = op_set.fixed_verts.get_group(new_obj, device)
         disp_field = op_set.displacement.get_field(new_obj, device)
         laplacian_field = op_set.laplacian.get_field(new_obj, device)
@@ -99,6 +101,12 @@ class MESH_OT_Inflation(Operator):
         laplacian_field[neg_mask] = laplacian_field[neg_mask] / 10000
         alpha_field = op_set.alpha.get_field(new_obj, device)
         beta_field = op_set.beta.get_field(new_obj, device)
+        print("disp", disp_field.min(), disp_field.max(), disp_field.shape)
+        print(
+            "lap", laplacian_field.min(), laplacian_field.max(), laplacian_field.shape
+        )
+        print("alpha", alpha_field.min(), alpha_field.max(), alpha_field.shape)
+        print("beta", beta_field.min(), beta_field.max(), beta_field.shape)
 
         self.new_obj = new_obj
         self.original_obj = obj
@@ -121,8 +129,13 @@ class MESH_OT_Inflation(Operator):
         return {"RUNNING_MODAL"}
 
     def modal(self, context, event):
+
         if event.type == "TIMER" and self._job.is_done():
             new_V = self._job.get_result()
+            print(
+                "update",
+                new_V - BlendTorch.mesh2tensor(self.new_obj, device=new_V.device)[0],
+            )
             BlendTorch.tensor2mesh_update(self.new_obj, new_V)
             link_to_same_scene_collections(self.original_obj, self.new_obj)
             context.window_manager.event_timer_remove(self._timer)

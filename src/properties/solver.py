@@ -65,7 +65,9 @@ class SolverSettings(PropertyGroup):
         return [("AUTO", "Auto", ""), *options]
 
     def get_device(self) -> torch.device:
-        return torch.device(self.device if self.device else "cpu")
+        if torch.cuda.is_available() and self.device is not None:
+            return torch.device(self.device)
+        return torch.device("cpu")
 
     def get_config(self) -> SolverConfig:
         return SolverConfig(
