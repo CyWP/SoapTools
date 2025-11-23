@@ -21,6 +21,11 @@ from ..utils.math.remap import Remap
 
 MAPPINGS = [
     ("LINEAR", "Linear", "x' = x"),
+    (
+        "REMAP_POINT",
+        "Remap Point",
+        "x' = x/(x+((1-x)*dest*(1-src)/(src*(1-dest)))), smoothly remaps src to dest.",
+    ),
     ("INVERT", "Invert", "x' = 1-x"),
     ("FILL", "Fill", "x' = (x-x_min)/(x_max-x_min)"),
     ("SMOOTH", "Smooth", "x' = 3x^2-2x^3"),
@@ -76,6 +81,20 @@ class RemappingMode(PropertyGroup):
         default=0.5,
         min=0.0,
         max=1.0,
+        subtype="FACTOR",
+    )  # type: ignore
+    remap_src: FloatProperty(
+        name="Value",
+        description="Value to be remapped",
+        default=0,
+    )  # type: ignore
+    remap_dest: FloatProperty(
+        name="Destination",
+        description="Destination of remapped value in 0-1 space",
+        default=0.5,
+        min=0.0,
+        max=1.0,
+        subtype="FACTOR",
     )  # type: ignore
 
     def draw(self, layout):
@@ -84,6 +103,9 @@ class RemappingMode(PropertyGroup):
         line.prop(self, "map_type", text="")
         if map_type in ("LINEAR", "SMOOTH", "FILL", "INVERT"):
             pass
+        elif map_type == "REMAP_POINT":
+            line.prop(self, "remap_src")
+            line.prop(self, "remap_dest")
         elif map_type == "THRESHOLD":
             line.prop(self, "threshold")
         elif map_type == "GAUSSIAN":
@@ -98,8 +120,15 @@ class RemappingMode(PropertyGroup):
             raise ValueError(f"'{map_type}' is an unrecognized map type.")
         return line
 
-    def process(self, x: torch.Tensor) -> torch.Tensor:
+    def process(
+        self, x: torch.Tensor, map_min: float = 0, map_max: float = 1
+    ) -> torch.Tensor:
         map_type = self.map_type
+        if map_type == "REMAP_POINT":
+            if self.remap_src < map_min or self.remap_src > map_max:
+                raise ValueError("Remaping value cannot be outside of mapping range.")
+            src_norm = float(self.remap_src - map_min) / (map_max - map_min)
+            return Remap.map_val(x, src_norm, self.remap_dest)
         if map_type == "LINEAR":
             return Remap.linear(x)
         if map_type == "INVERT":
@@ -140,9 +169,9 @@ class RemappingStack(PropertyGroup):
             op = layout.operator("soap.add_mode_operator", text="Remap")
             op.data_path = self.modes.path_from_id()
 
-    def process(self, x: torch.Tensor):
+    def process(self, x: torch.Tensor, map_min: float = 0, map_max: float = 1):
         for mode in self.modes:
-            x = mode.process(x)
+            x = mode.process(x, map_min, map_max)
         return x
 
 
@@ -236,6 +265,7 @@ class ScalarVertexMapSettings(PropertyGroup):
         nV = len(obj.data.vertices)
         constant_field = self.map_source == "CONSTANT"
         use_range = self.val_mode == "RANGE" and not constant_field
+        r0, r1, val = float(self.r_0), float(self.r_1), float(self.val)
         if self.strict and self.group != "NONE":
             harden_vertex_group(obj, self.group)
         if self.map_source == "VERTEX GROUP":
@@ -245,8 +275,7 @@ class ScalarVertexMapSettings(PropertyGroup):
         else:
             field = torch.ones((nV,), device=device)
         if not constant_field:
-            field = self.remap_stack.process(field)
-        r0, r1, val = float(self.r_0), float(self.r_1), float(self.val)
+            field = self.remap_stack.process(field, map_min=r0, map_max=r1)
         field = (r1 - r0) * field + r0 if use_range else val * field
         return field
 
