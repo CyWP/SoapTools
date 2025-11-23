@@ -121,10 +121,9 @@ class RemappingMode(PropertyGroup):
             raise ValueError(f"'{map_type}' is an unrecognized map type.")
         return line
 
-    def process(
-        self, x: torch.Tensor, map_min: float = 0, map_max: float = 1
-    ) -> torch.Tensor:
+    def process(self, x: torch.Tensor, r0: float = 0, r1: float = 1) -> torch.Tensor:
         map_type = self.map_type
+        map_min, map_max = min(r0, r1), max(r0, r1)
         if map_type == "REMAP_POINT":
             if self.remap_src < map_min or self.remap_src > map_max:
                 raise ValueError("Remaping value cannot be outside of mapping range.")
@@ -170,9 +169,9 @@ class RemappingStack(PropertyGroup):
             op = layout.operator("soap.add_mode_operator", text="Remap")
             op.data_path = self.modes.path_from_id()
 
-    def process(self, x: torch.Tensor, map_min: float = 0, map_max: float = 1):
+    def process(self, x: torch.Tensor, r0: float = 0, r1: float = 1):
         for mode in self.modes:
-            x = mode.process(x, map_min, map_max)
+            x = mode.process(x, r0, r1)
         return x
 
 
@@ -276,7 +275,7 @@ class ScalarVertexMapSettings(PropertyGroup):
         else:
             field = torch.ones((nV,), device=device)
         if not constant_field:
-            field = self.remap_stack.process(field, map_min=r0, map_max=r1)
+            field = self.remap_stack.process(field, r0=r0, r1=r1)
         field = (r1 - r0) * field + r0 if use_range else val * field
         return field
 
