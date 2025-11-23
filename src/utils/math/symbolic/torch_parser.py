@@ -14,21 +14,21 @@ class TorchParser(Parser):
         "tan": torch.tan,
         "exp": torch.exp,
         "log": torch.log,
-        "softmax": lambda x: F.softmax(x, dim=-1),
-        "sigmoid": F.sigmoid,
+        "soft": lambda x: F.softmax(x, dim=-1),
+        "sig": F.sigmoid,
         "tanh": F.tanh,
         "relu": F.relu,
-        "normalize": lambda x: F.normalize(x, dim=-1),
+        "normz": lambda x: F.normalize(x, dim=-1),
         "norm": lambda x: x.norm(),
         "max": lambda x: x.max(),
+        "emax": lambda x, y: torch.maximum(x, y),
         "min": lambda x: x.min(),
+        "emin": lambda x, y: torch.minimum(x, y),
         "mean": lambda x: x.mean(),
+        "clamp": lambda x, a, b: torch.clamp(x, min=a, max=b),
     }
-
-    _torch_constants = {"pi": torch.tensor(math.pi), "e": torch.tensor(math.e)}
 
     def __init__(self):
         super().__init__(
             functions=TorchParser._torch_functions,
-            constants=TorchParser._torch_constants,
         )

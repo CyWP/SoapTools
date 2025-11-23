@@ -18,23 +18,23 @@ class BinOp:
         self.r = r
 
 
-class UnaryFunc:
-    def __init__(self, name, arg):
+class Func:
+    def __init__(self, name, args):
         self.name = name
-        self.arg = arg
+        self.args = args
 
 
 class Parser:
     """
-    Recursive descent base parser
+    Recursive descent parser with support for multi-argument functions.
     """
 
     TOKEN_RE = re.compile(
-        r"\s*(?:(\d+(\.\d*)?)|([A-Za-z_][A-Za-z_0-9]*)|(\*\*|[()+\-*/^~]))"
+        r"\s*(?:(\d+(\.\d*)?)|([A-Za-z_][A-Za-z_0-9]*)|(\*\*|[(),+\-*/^~]))"
     )
 
     def __init__(self, functions=None, operators=None, constants=None):
-        # Default unary functions
+        # Default functions
         self.functions = functions or {
             "abs": abs,
             "sin": math.sin,
@@ -42,7 +42,10 @@ class Parser:
             "tan": math.tan,
             "exp": math.exp,
             "log": math.log,
+            "max": max,
+            "min": min,
         }
+
         # Default binary operators
         self.operators = operators or {
             "+": lambda a, b: a + b,
@@ -52,6 +55,7 @@ class Parser:
             "^": lambda a, b: a**b,
             "%": lambda a, b: a % b,
         }
+
         # Default constants
         self.constants = constants or {
             "pi": math.pi,
@@ -115,53 +119,81 @@ class Parser:
 
     def atom(self):
         tok_type, tok_val = self.consume()
+
+        # Numbers
         if tok_type == "NUMBER":
             return Number(tok_val)
-        elif tok_type == "NAME":
-            # Function call with parentheses
-            if self.peek()[1] == "(":
-                self.consume()
-                arg = self.expr()
-                if self.consume()[1] != ")":
-                    raise SyntaxError("Expected ')'")
-                return UnaryFunc(tok_val, arg)
-            # Unary function
-            elif tok_val in self.functions:
-                return UnaryFunc(tok_val, self.atom())
-            # Variable or constant
-            return Variable(tok_val)
-        elif tok_val == "(":
+
+        # Parenthesized subexpression
+        if tok_val == "(":
             node = self.expr()
             if self.consume()[1] != ")":
                 raise SyntaxError("Expected ')'")
             return node
-        elif tok_val in self.functions:
-            return UnaryFunc(tok_val, self.atom())
-        else:
-            raise SyntaxError(f"Unexpected token: {tok_val}")
+
+        # Function call or variable
+        if tok_type == "NAME":
+            name = tok_val
+
+            # Function call with parentheses: f(...)
+            if self.peek()[1] == "(":
+                self.consume()  # consume '('
+                args = self.arg_list()
+                return Func(name, args)
+
+            # Prefix unary function: sin x
+            if name in self.functions:
+                return Func(name, [self.atom()])
+
+            # Variable or constant
+            return Variable(name)
+
+        raise SyntaxError(f"Unexpected token: {tok_val}")
+
+    def arg_list(self):
+        args = []
+        if self.peek()[1] == ")":
+            self.consume()
+            return args
+
+        args.append(self.expr())
+
+        while self.peek()[1] == ",":
+            self.consume()
+            args.append(self.expr())
+
+        if self.consume()[1] != ")":
+            raise SyntaxError("Expected ')' after arguments")
+
+        return args
 
     def eval(self, node, vars={}):
         if isinstance(node, Number):
             return node.v
+
         if isinstance(node, Variable):
             if node.n in vars:
                 return vars[node.n]
-            elif node.n in self.constants:
+            if node.n in self.constants:
                 return self.constants[node.n]
-            else:
-                raise NameError(f"Unknown variable {node.n}")
+            raise NameError(f"Unknown variable {node.n}")
+
         if isinstance(node, BinOp):
             l = self.eval(node.l, vars)
             r = self.eval(node.r, vars)
             if node.op not in self.operators:
                 raise NameError(f"Unknown operator {node.op}")
             return self.operators[node.op](l, r)
-        if isinstance(node, UnaryFunc):
+
+        if isinstance(node, Func):
             if node.name not in self.functions:
                 raise NameError(f"Unknown function {node.name}")
-            arg_val = self.eval(node.arg, vars)
-            return self.functions[node.name](arg_val)
+
+            fn = self.functions[node.name]
+            args = [self.eval(a, vars) for a in node.args]
+            return fn(*args)
+
+        raise TypeError(f"Unknown node type: {node}")
 
     def compute(self, expr, vars={}):
-        tree = self.parse(expr)
-        return self.eval(tree, vars)
+        return self.eval(self.parse(expr), vars)

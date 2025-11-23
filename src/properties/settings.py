@@ -6,6 +6,7 @@ from bpy.types import PropertyGroup
 
 from .baking import BakingSettings
 from .img import ImageMappingSettings
+from .map_ops import MapOperationSettings
 from .solver import SolverSettings
 from .svm import ScalarVertexMapSettings, RemappingStack
 from .v_group import SimpleVertexGroup
@@ -83,3 +84,4 @@ class GlobalSettings(PropertyGroup):
     bake: PointerProperty(type=BakingSettings)  # type:ignore
     imgmap: PointerProperty(type=ImageMappingSettings)  # type:ignore
     vgremap: PointerProperty(type=RemapVertexGroupSettings)  # type:ignore
+    mapops: PointerProperty(type=MapOperationSettings)  # type:ignore
