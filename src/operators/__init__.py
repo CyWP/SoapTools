@@ -6,3 +6,4 @@ from .selectbound import MESH_OT_SelectBoundary
 from .bake import MESH_OT_BakeChannel
 from .img2vg import MESH_OT_ImageToVG
 from .vgremap import MESH_OT_RemapVGroup
+from .mapops import MESH_OT_OperateMaps

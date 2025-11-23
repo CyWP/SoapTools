@@ -69,8 +69,13 @@ def bake_material(
         raise ValueError(f"Material '{material_name}' not found")
 
     # Assign material if not already
-    if mat.name not in obj.data.materials:
-        obj.data.materials.append(mat)
+    if obj.active_material != mat:
+        # Ensure material exists in slots
+        if mat.name not in obj.data.materials:
+            obj.data.materials.append(mat)
+
+    # Make it active
+    obj.active_material = mat
 
     # Create internal image
     img_name = f"Bake_{material_name}_{bake_type}"

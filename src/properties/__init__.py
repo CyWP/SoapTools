@@ -17,4 +17,10 @@ from .svm import (
 from .v_group import SimpleVertexGroup
 from .solver import SolverSettings
 from .baking import BakingSettings
+from .map_ops import (
+    SymbolicExpression,
+    MapOperationSettings,
+    OPMAP_OT_AddMapVariable,
+    OPMAP_OT_RemoveMapVariable,
+)
 from .img import ImageSettings, ImageMappingSettings

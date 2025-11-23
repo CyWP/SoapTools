@@ -8,6 +8,7 @@ from bpy.props import (
     EnumProperty,
     CollectionProperty,
     PointerProperty,
+    StringProperty,
 )
 from bpy.types import PropertyGroup, UIList, Operator, Object
 from typing import Optional
@@ -198,7 +199,7 @@ class REMAP_OT_AddModeOperator(Operator):
     bl_description = "Add remapping function to the vertex groups values [0, 1] before applying range or weights."
     bl_options = {"INTERNAL"}
 
-    data_path: bpy.props.StringProperty()  # type: ignore
+    data_path: StringProperty()  # type: ignore
 
     def execute(self, context):
         target = eval(f"context.scene.{self.data_path}")
@@ -279,7 +280,7 @@ class ScalarVertexMapSettings(PropertyGroup):
         field = (r1 - r0) * field + r0 if use_range else val * field
         return field
 
-    def draw(self, layout, name: str):
+    def draw(self, layout, name: str = None):
         constant_field = self.map_source == "CONSTANT"
         use_range = self.val_mode == "RANGE" and not constant_field
         box = layout.box()
