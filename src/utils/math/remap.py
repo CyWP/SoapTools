@@ -2,6 +2,18 @@ import torch
 
 
 class Remap:
+    """
+    Bunch of functions for remapping in 0-1 1D space.
+    """
+
+    @staticmethod
+    def map_val(x: torch.Tensor, source: float, dest: float, eps=1e-5) -> torch.Tensor:
+        if source < eps or 1 - dest < eps:
+            return torch.zeros_like(x)
+        if dest < eps or 1 - source < eps:
+            return torch.ones_like(x)
+        return x / (x + ((1 - x) * dest * (1 - source) / (source * (1 - dest))))
+
     @staticmethod
     def linear(x: torch.Tensor) -> torch.Tensor:
         return x
