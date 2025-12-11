@@ -7,6 +7,41 @@ from typing import List
 from .vertex_groups import harden_vertex_group
 
 
+def safe_select(obj: Object):
+    try:
+        bpy.ops.object.select_all(action="DESELECT")
+    except RuntimeError:
+        pass
+    finally:
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+
+
+def safe_delete(obj: Object):
+    """
+    Safely delete a Blender object, regardless of collection links or selection.
+    """
+    if obj is None:
+        return
+
+    # Unlink from all collections if linked
+    for col in obj.users_collection:
+        col.objects.unlink(obj)
+
+    # Unlink from active scene collection if necessary
+    if bpy.context.scene.collection.objects.get(obj.name):
+        bpy.context.scene.collection.objects.unlink(obj)
+
+    # Deselect and remove active status
+    if obj.select_get():
+        obj.select_set(False)
+    if bpy.context.view_layer.objects.active == obj:
+        bpy.context.view_layer.objects.active = None
+
+    # Remove from bpy.data
+    bpy.data.objects.remove(obj, do_unlink=True)
+
+
 def apply_first_n_modifiers(
     obj: Object,
     n: int,

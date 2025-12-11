@@ -1,7 +1,6 @@
 import bpy
 
-from bpy.types import Context, Object, Image
-from typing import List, Tuple
+from bpy.types import Object, Image
 
 
 def duplicate_mesh_object(obj: bpy.types.Object, deep: bool = True) -> bpy.types.Object:
@@ -114,5 +113,7 @@ def bake_material(
     # Remove temporary node
     nodes.remove(tex_node)
 
+    # internally save image
+    img.pack()
     # Return the baked image
     return img

@@ -1,31 +1,14 @@
 import bpy
 import torch
 
-from bpy.props import EnumProperty, IntProperty, FloatProperty
+from bpy.props import EnumProperty, IntProperty, FloatProperty, PointerProperty
 from bpy.types import PropertyGroup
 from typing import List, Tuple
 
 from ..utils.math.solvers import Solver, SolverConfig
 
 
-def get_torch_devices():
-    """Dynamically list available torch devices."""
-    devices = [("CPU", "CPU", "Use the CPU for computation.")]
-    if torch.cuda.is_available():
-        for i in range(torch.cuda.device_count()):
-            name = torch.cuda.get_device_name(i)
-            devices.append((f"cuda:{i}", f"GPU", f"GPU {i}: {name}"))
-    return devices
-
-
 class SolverSettings(PropertyGroup):
-    device: EnumProperty(
-        name="Device",
-        description="Compute device used for torch operations",
-        items=lambda self, context: get_torch_devices(),
-        default=0,
-    )  # type: ignore
-
     solver: EnumProperty(
         name="Solver",
         description="Solver used for linear system.",
@@ -64,18 +47,13 @@ class SolverSettings(PropertyGroup):
         options = [(name, name, "") for name, cls in Solver()._precond_classes.items()]
         return [("AUTO", "Auto", ""), *options]
 
-    def get_device(self) -> torch.device:
-        if torch.cuda.is_available() and self.device is not None:
-            return torch.device(self.device)
-        return torch.device("cpu")
-
-    def get_config(self) -> SolverConfig:
+    def get_config(self, device: torch.device) -> SolverConfig:
         return SolverConfig(
             solver=self.solver,
             precond=self.precond,
             iters=self.iters,
             tolerance=self.tolerance,
-            device=self.get_device(),
+            device=device,
         )
 
     def draw(self, layout):
@@ -85,9 +63,6 @@ class SolverSettings(PropertyGroup):
         row.enabled = False
         row.label(text="Solver")
         solver = self.solver
-        if len(get_torch_devices()) > 1:
-            row = box.row()
-            row.prop(self, "device", expand=True)
         row = box.row()
         row.prop(self, "solver")
         if solver not in ("AUTO", "Direct"):

@@ -12,22 +12,7 @@ from bpy.types import PropertyGroup, Operator, Object, Context
 from typing import Dict, List, Tuple, Union
 
 from .svm import ScalarVertexMapSettings
-from ..utils.math.symbolic import Parser, TorchParser
-
-
-class SymbolicExpression(PropertyGroup):
-    expression: StringProperty(
-        name="Expression",
-        description="Mathematical expression used for mapping",
-        default="",
-    )  # type:ignore
-
-    def eval(
-        self, vars: Dict[str, Union[float, torch.Tensor]], tensor: bool = True
-    ) -> Union[float, torch.Tensor]:
-        if tensor:
-            return TorchParser().compute(self.expression, vars=vars)
-        return Parser().compute(self.expression, vars=vars)
+from .symbolic import SymbolicExpression
 
 
 class MapOperationSettings(PropertyGroup):
@@ -37,6 +22,7 @@ class MapOperationSettings(PropertyGroup):
     var_names: EnumProperty(
         name="Variables", items=lambda self, context: self.get_vars(context)
     )  # type:ignore
+
     output_format: EnumProperty(
         name="Format",
         items=[("CLAMP", "Clamp", ""), ("REMAP", "Remap", "")],

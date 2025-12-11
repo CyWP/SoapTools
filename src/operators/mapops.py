@@ -1,12 +1,12 @@
 import bpy
 import torch
 
-from bpy.types import Context, Operator
+from bpy.types import Context, Event, Operator
 
 from ..utils.blend_data.blendtorch import BlendTorch
 
 
-class MESH_OT_OperateMaps(Operator):
+class SOAP_OT_OperateMaps(Operator):
     bl_idname = "soap.op_maps"
     bl_label = "SoapTools: Map operations"
     bl_icon = "NODE_MATERIAL"
@@ -18,7 +18,7 @@ class MESH_OT_OperateMaps(Operator):
         obj = context.active_object
         return obj is not None and obj.type == "MESH"
 
-    def invoke(self, context: Context, event):
+    def invoke(self, context: Context, event: Event):
         if not self.poll(context):
             self.report({"ERROR"}, "Active object must be a mesh with vertex groups")
             return {"CANCELLED"}

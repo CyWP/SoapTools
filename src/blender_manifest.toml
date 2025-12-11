@@ -6,6 +6,10 @@ tagline = "Computational design tools for Blender."
 maintainer = "Thomas Wolfgang Peschlow <thomas.p24@live.com>"
 type = "add-on"
 tags = ["Modeling"]
-wheels = []
 blender_version_min = "4.2.0"
 license = ["SPDX:GPL-3.0-or-later"]
+
+dependencies = [
+    { module = "torch==2.6.0" },
+    { module = "scipy==1.16.2" }
+]

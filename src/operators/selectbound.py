@@ -1,11 +1,11 @@
 import bpy
 
-from bpy.types import Context
+from bpy.types import Context, Operator
 
 from ..utils.blend_data.mesh_obj import select_boundary
 
 
-class MESH_OT_SelectBoundary(bpy.types.Operator):
+class SOAP_OT_SelectBoundary(Operator):
     bl_idname = "soap.selectbound"
     bl_label = "SoapTools: Select Boundary"
     bl_icon = "NODE_MATERIAL"

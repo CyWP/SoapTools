@@ -1,12 +1,12 @@
 import bpy
 import torch
 
-from bpy.types import Context, Operator
+from bpy.types import Context, Operator, Event
 
 from ..utils.blend_data.blendtorch import BlendTorch
 
 
-class MESH_OT_RemapVGroup(Operator):
+class SOAP_OT_RemapVGroup(Operator):
     bl_idname = "soap.vgremap"
     bl_label = "SoapTools: Remap Vertex Group"
     bl_icon = "NODE_MATERIAL"
@@ -20,7 +20,7 @@ class MESH_OT_RemapVGroup(Operator):
         obj = context.active_object
         return obj is not None and obj.type == "MESH"
 
-    def invoke(self, context: Context, event):
+    def invoke(self, context: Context, event: Event):
         if not self.poll(context):
             self.report({"ERROR"}, "Active object must be a mesh with vertex groups")
             return {"CANCELLED"}
@@ -40,9 +40,9 @@ class MESH_OT_RemapVGroup(Operator):
     def execute(self, context: Context):
         obj = context.active_object
         settings = context.scene.soap_settings.vgremap
-        device = torch.device("cpu")
+        device = context.scene.soap_settings.device.get_device()
         og_name = settings.group.group
         W, idx = settings.group.get_group(obj, device, none_valid=False)
         W = settings.remap.process(W)
-        BlendTorch.tensor2vg(obj, f"{og_name}{MESH_OT_RemapVGroup._suffix}", W)
+        BlendTorch.tensor2vg(obj, f"{og_name}{SOAP_OT_RemapVGroup._suffix}", W)
         return {"FINISHED"}

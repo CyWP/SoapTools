@@ -2,7 +2,7 @@ import bpy
 import torch
 
 from bpy.props import PointerProperty, EnumProperty, IntProperty, BoolProperty
-from bpy.types import PropertyGroup
+from bpy.types import PropertyGroup, Object
 
 from .baking import BakingSettings
 from .img import ImageMappingSettings
@@ -11,6 +11,7 @@ from .solver import SolverSettings
 from .svm import ScalarVertexMapSettings, RemappingStack
 from .v_group import SimpleVertexGroup
 from ..utils.blend_data.enums import BlendEnums
+from .device import TorchDevice
 
 
 class MinSrfSettings(PropertyGroup):
@@ -76,7 +77,19 @@ class RemapVertexGroupSettings(PropertyGroup):
     group: PointerProperty(type=SimpleVertexGroup)  # type:ignore
 
 
+class InterpolationSettings(PropertyGroup):
+    apply_after: EnumProperty(
+        name="Apply after",
+        description="Applies modifier and all prior ones in stack before transforming, preserves ones after.",
+        items=BlendEnums.modifiers,
+    )  # type:ignore
+    fixed_verts: PointerProperty(type=SimpleVertexGroup)  # type: ignore
+    weights_map: PointerProperty(type=ScalarVertexMapSettings)  # type:ignore
+    target: PointerProperty(type=Object)  # type: ignore
+
+
 class GlobalSettings(PropertyGroup):
+    device: PointerProperty(type=TorchDevice)  # type: ignore
     minsrf: PointerProperty(type=MinSrfSettings)  # type: ignore
     flation: PointerProperty(type=FlationSettings)  # type: ignore
     vghard: PointerProperty(type=HardenVertexGroupSettings)  # type:ignore
@@ -85,3 +98,4 @@ class GlobalSettings(PropertyGroup):
     imgmap: PointerProperty(type=ImageMappingSettings)  # type:ignore
     vgremap: PointerProperty(type=RemapVertexGroupSettings)  # type:ignore
     mapops: PointerProperty(type=MapOperationSettings)  # type:ignore
+    lerp: PointerProperty(type=InterpolationSettings)  # type:ignore

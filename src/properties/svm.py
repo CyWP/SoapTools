@@ -14,14 +14,15 @@ from bpy.types import PropertyGroup, UIList, Operator, Object
 from typing import Optional
 
 from .img import ImageMappingSettings
+from .symbolic import SymbolicExpression
 from ..utils.blend_data.blendtorch import BlendTorch
 from ..utils.blend_data.enums import BlendEnums
 from ..utils.blend_data.vertex_groups import harden_vertex_group
 from ..utils.math.remap import Remap
 
-
 MAPPINGS = [
     ("LINEAR", "Linear", "x' = x"),
+    ("EXPRESSION", "Expression", "Enter custom mathematical expression for map x."),
     (
         "REMAP_POINT",
         "Remap Point",
@@ -47,6 +48,7 @@ class RemappingMode(PropertyGroup):
         default=0,
         description="Remapping modes of values in 0-1 range space.",
     )  # type: ignore
+    expression: PointerProperty(type=SymbolicExpression)  # type:ignore
     period: FloatProperty(
         name="Period",
         description="Period of function, multiplied by 2*pi.",
@@ -104,6 +106,8 @@ class RemappingMode(PropertyGroup):
         line.prop(self, "map_type", text="")
         if map_type in ("LINEAR", "SMOOTH", "FILL", "INVERT"):
             pass
+        elif map_type == "EXPRESSION":
+            line.prop(self.expression, "expression", text="")
         elif map_type == "REMAP_POINT":
             line.prop(self, "remap_src")
             line.prop(self, "remap_dest")
@@ -129,6 +133,8 @@ class RemappingMode(PropertyGroup):
                 raise ValueError("Remaping value cannot be outside of mapping range.")
             src_norm = float(self.remap_src - map_min) / (map_max - map_min)
             return Remap.map_val(x, src_norm, self.remap_dest)
+        elif map_type == "EXPRESSION":
+            return self.expression.eval({"x": x})
         if map_type == "LINEAR":
             return Remap.linear(x)
         if map_type == "INVERT":

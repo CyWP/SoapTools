@@ -1,10 +1,9 @@
 import bpy
-import torch
 
-from bpy.types import Context
+from bpy.types import Context, Event, Operator
 
 
-class MESH_OT_ImageToVG(bpy.types.Operator):
+class SOAP_OT_ImageToVG(Operator):
     bl_idname = "soap.img2vg"
     bl_label = "SoapTools: Image to vertex group"
     bl_icon = "NODE_MATERIAL"
@@ -16,19 +15,20 @@ class MESH_OT_ImageToVG(bpy.types.Operator):
         obj = context.active_object
         return obj is not None and obj.type == "MESH"
 
-    def invoke(self, context: Context, event):
+    def invoke(self, context: Context, event: Event):
         if not self.poll(context):
             self.report({"ERROR"}, "Active object must be a mesh with vertex groups")
             return {"CANCELLED"}
         return context.window_manager.invoke_props_dialog(self)
 
-    def execute(self, context: Context):
-        obj = context.active_object
-        settings = context.scene.soap_settings.imgmap
-        settings.create_vertex_group(obj, torch.device("cpu"))
-        return {"FINISHED"}
-
     def draw(self, context: Context):
         layout = self.layout
         settings = context.scene.soap_settings.imgmap
         settings.draw(layout)
+
+    def execute(self, context: Context):
+        obj = context.active_object
+        device = context.scene.soap_settings.device.get_device()
+        settings = context.scene.soap_settings.imgmap
+        settings.create_vertex_group(obj, device)
+        return {"FINISHED"}

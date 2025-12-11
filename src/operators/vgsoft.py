@@ -1,6 +1,6 @@
 import bpy
 
-from bpy.types import Context
+from bpy.types import Context, Operator
 
 from ..utils.blend_data.vertex_groups import (
     soften_vertex_group_inwards,
@@ -9,7 +9,7 @@ from ..utils.blend_data.vertex_groups import (
 )
 
 
-class MESH_OT_SoftenVGroup(bpy.types.Operator):
+class SOAP_OT_SoftenVGroup(Operator):
     bl_idname = "soap.vgsoft"
     bl_label = "SoapTools: Soften vertex group"
     bl_icon = "NODE_MATERIAL"

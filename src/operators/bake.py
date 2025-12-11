@@ -1,10 +1,10 @@
 import bpy
 import torch
 
-from bpy.types import Context
+from bpy.types import Context, Event, Operator
 
 
-class MESH_OT_BakeChannel(bpy.types.Operator):
+class SOAP_OT_BakeChannel(Operator):
     bl_idname = "soap.bake"
     bl_label = "SoapTools: Bake material"
     bl_icon = "NODE_MATERIAL"
@@ -16,7 +16,7 @@ class MESH_OT_BakeChannel(bpy.types.Operator):
         obj = context.active_object
         return obj is not None and obj.type == "MESH"
 
-    def invoke(self, context: Context, event):
+    def invoke(self, context: Context, event: Event):
         if not self.poll(context):
             self.report({"ERROR"}, "Active object must be a mesh with vertex groups")
             return {"CANCELLED"}

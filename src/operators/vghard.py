@@ -1,12 +1,11 @@
 import bpy
 
-from bpy.types import Context
+from bpy.types import Context, Event, Operator
 
-from ..utils.blend_data.enums import BlendEnums
 from ..utils.blend_data.vertex_groups import harden_vertex_group, get_vertex_group_copy
 
 
-class MESH_OT_HardenVGroup(bpy.types.Operator):
+class SOAP_OT_HardenVGroup(Operator):
     bl_idname = "soap.vghard"
     bl_label = "SoapTools: Harden vertex group"
     bl_icon = "NODE_MATERIAL"
@@ -20,7 +19,7 @@ class MESH_OT_HardenVGroup(bpy.types.Operator):
         obj = context.active_object
         return obj is not None and obj.type == "MESH"
 
-    def invoke(self, context: Context, event):
+    def invoke(self, context: Context, event: Event):
         if not self.poll(context):
             self.report({"ERROR"}, "Active object must be a mesh with vertex groups")
             return {"CANCELLED"}

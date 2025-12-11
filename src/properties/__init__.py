@@ -4,6 +4,7 @@ from .settings import (
     FlationSettings,
     RemapVertexGroupSettings,
     SoftenVertexGroupSettings,
+    InterpolationSettings,
     HardenVertexGroupSettings,
 )
 from .svm import (
@@ -18,9 +19,10 @@ from .v_group import SimpleVertexGroup
 from .solver import SolverSettings
 from .baking import BakingSettings
 from .map_ops import (
-    SymbolicExpression,
     MapOperationSettings,
     OPMAP_OT_AddMapVariable,
     OPMAP_OT_RemoveMapVariable,
 )
+from .symbolic import SymbolicExpression
 from .img import ImageSettings, ImageMappingSettings
+from .device import TorchDevice
