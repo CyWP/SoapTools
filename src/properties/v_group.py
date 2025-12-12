@@ -18,12 +18,12 @@ class SimpleVertexGroup(PropertyGroup):
         name="Vertex group",
         items=BlendEnums.vertex_groups,
         default=0,
-    )  # type: ignore
+    )
     strict: BoolProperty(
         name="Strict",
         description="Prevents vertex group weights from smoothing and propagating after a subdivision pass.",
         default=True,
-    )  # type: ignore
+    )
 
     def draw(self, layout, text: str = None):
         layout.prop(self, "group", text=text if text else "")

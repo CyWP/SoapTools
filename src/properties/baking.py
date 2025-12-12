@@ -25,30 +25,30 @@ class BakingSettings(PropertyGroup):
         name="UV Map",
         items=BlendEnums.uv_maps,
         description="Destination UV map for the baking process.",
-    )  # type:ignore
+    )
     material: EnumProperty(
         name="Material",
         items=BlendEnums.materials,
         description="Material for which seelcted channel will be baked.",
-    )  # type: ignore
+    )
     height: IntProperty(
         name="Height",
         description="Height of baked texture",
         default=512,
         min=1,
-    )  # type:ignore
+    )
     width: IntProperty(
         name="Width",
         description="Width of baked texture",
         default=512,
         min=1,
-    )  # type:ignore
+    )
     channel: EnumProperty(
         name="Channel",
         items=BAKE_CHANNELS,
         description="Channel to bake to an image.",
         default="EMIT",
-    )  # type:ignore
+    )
 
     def draw(self, layout):
         row = layout.row()

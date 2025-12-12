@@ -1,6 +1,9 @@
-#Blende rprojects
+#Blender projects
 *.blend
 *.blend1
+
+#Keeps track of installed modules inside of blender
+*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

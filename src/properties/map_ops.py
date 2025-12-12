@@ -17,18 +17,18 @@ from .symbolic import SymbolicExpression
 
 class MapOperationSettings(PropertyGroup):
 
-    exp: PointerProperty(type=SymbolicExpression)  # type:ignore
-    vars: CollectionProperty(type=ScalarVertexMapSettings)  # type:ignore
+    exp: PointerProperty(type=SymbolicExpression)
+    vars: CollectionProperty(type=ScalarVertexMapSettings)
     var_names: EnumProperty(
         name="Variables", items=lambda self, context: self.get_vars(context)
-    )  # type:ignore
+    )
 
     output_format: EnumProperty(
         name="Format",
         items=[("CLAMP", "Clamp", ""), ("REMAP", "Remap", "")],
         description="Method for dealing with out of range values.",
         default="CLAMP",
-    )  # type:ignore
+    )
 
     def get_vars(self, context: Context) -> List[Tuple[str]]:
         vars = []
@@ -93,7 +93,7 @@ class OPMAP_OT_AddMapVariable(Operator):
     bl_description = "Add variable to remapping function"
     bl_options = {"INTERNAL"}
 
-    data_path: StringProperty()  # type:ignore
+    data_path: StringProperty()
 
     def execute(self, context):
         target = eval(f"context.scene.{self.data_path}")  # resolve the PropertyGroup
@@ -107,8 +107,8 @@ class OPMAP_OT_RemoveMapVariable(Operator):
     bl_description = "Remove variable from remapping function"
     bl_options = {"INTERNAL"}
 
-    data_path: StringProperty()  # type:ignore
-    idx: IntProperty()  # type:ignore
+    data_path: StringProperty()
+    idx: IntProperty()
 
     def execute(self, context):
         target = eval(f"context.scene.{self.data_path}")  # resolve the PropertyGroup

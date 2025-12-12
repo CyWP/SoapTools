@@ -47,37 +47,37 @@ class RemappingMode(PropertyGroup):
         items=MAPPINGS,
         default=0,
         description="Remapping modes of values in 0-1 range space.",
-    )  # type: ignore
-    expression: PointerProperty(type=SymbolicExpression)  # type:ignore
+    )
+    expression: PointerProperty(type=SymbolicExpression)
     period: FloatProperty(
         name="Period",
         description="Period of function, multiplied by 2*pi.",
         default=0.5,
         min=1e-6,
-    )  # type:ignore
+    )
     phase: FloatProperty(
         name="Phase",
         description="Phase of function, multiplied by 2*pi.",
         default=0,
-    )  # type:ignore
+    )
     mean: FloatProperty(
         name="mean",
         description="mean of function.",
         default=0.5,
         min=0,
-    )  # type:ignore
+    )
     variance: FloatProperty(
         name="Variance",
         description="Variance of function.",
         default=1.0,
         min=0,
-    )  # type:ignore
+    )
     steps: IntProperty(
         name="Steps",
         description="Number of steps",
         default=1,
         min=1,
-    )  # type:ignore
+    )
     threshold: FloatProperty(
         name="Threshold",
         description="Threshold for function",
@@ -85,12 +85,12 @@ class RemappingMode(PropertyGroup):
         min=0.0,
         max=1.0,
         subtype="FACTOR",
-    )  # type: ignore
+    )
     remap_src: FloatProperty(
         name="Value",
         description="Value to be remapped",
         default=0,
-    )  # type: ignore
+    )
     remap_dest: FloatProperty(
         name="Destination",
         description="Destination of remapped value in 0-1 space",
@@ -98,7 +98,7 @@ class RemappingMode(PropertyGroup):
         min=0.0,
         max=1.0,
         subtype="FACTOR",
-    )  # type: ignore
+    )
 
     def draw(self, layout):
         line = layout.row(align=True)
@@ -159,8 +159,8 @@ class RemappingMode(PropertyGroup):
 
 
 class RemappingStack(PropertyGroup):
-    modes: CollectionProperty(type=RemappingMode)  # type:ignore
-    active_index: IntProperty(default=0)  # type:ignore
+    modes: CollectionProperty(type=RemappingMode)
+    active_index: IntProperty(default=0)
 
     def draw(self, layout, compact: bool = True):
         if len(self.modes) > 0 or not compact:
@@ -204,7 +204,7 @@ class REMAP_OT_AddModeOperator(Operator):
     bl_description = "Add remapping function to the vertex groups values [0, 1] before applying range or weights."
     bl_options = {"INTERNAL"}
 
-    data_path: StringProperty()  # type: ignore
+    data_path: StringProperty()
 
     def execute(self, context):
         target = eval(f"context.scene.{self.data_path}")
@@ -217,8 +217,8 @@ class REMAP_OT_RemoveModeOperator(Operator):
     bl_label = "Remove Mode"
     bl_options = {"INTERNAL"}
 
-    data_path: bpy.props.StringProperty()  # type: ignore
-    idx: IntProperty()  # type: ignore
+    data_path: bpy.props.StringProperty()
+    idx: IntProperty()
 
     def execute(self, context):
         target = eval(f"context.scene.{self.data_path}")  # resolve the PropertyGroup
@@ -236,25 +236,21 @@ class ScalarVertexMapSettings(PropertyGroup):
             ("RANGE", "Range", ""),
         ],
         default="VALUE",
-    )  # type:ignore
-    val: FloatProperty(name="", description="Value", default=1)  # type:ignore
-    r_0: FloatProperty(
-        name="", description="Start of mapping range", default=0
-    )  # type:ignore
-    r_1: FloatProperty(
-        name="", description="End of mapping range", default=1
-    )  # type:ignore
+    )
+    val: FloatProperty(name="", description="Value", default=1)
+    r_0: FloatProperty(name="", description="Start of mapping range", default=0)
+    r_1: FloatProperty(name="", description="End of mapping range", default=1)
     group: EnumProperty(
         name="Vertex group",
         items=BlendEnums.vertex_groups,
         default=0,
-    )  # type: ignore
+    )
     strict: BoolProperty(
         name="Strict",
         description="Prevents vertex group weights from smoothing and propagating after a subdivision pass.",
         default=False,
-    )  # type: ignore
-    remap_stack: PointerProperty(type=RemappingStack)  # type: ignore
+    )
+    remap_stack: PointerProperty(type=RemappingStack)
     map_source: EnumProperty(
         name="Source",
         items=[
@@ -264,8 +260,8 @@ class ScalarVertexMapSettings(PropertyGroup):
         ],
         description="Source for creating scalar value map.",
         default="CONSTANT",
-    )  # type:ignore
-    img_map: PointerProperty(type=ImageMappingSettings)  # type:ignore
+    )
+    img_map: PointerProperty(type=ImageMappingSettings)
 
     def get_field(self, obj: Object, device: torch.device) -> Optional[torch.Tensor]:
         nV = len(obj.data.vertices)

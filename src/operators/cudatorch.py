@@ -2,9 +2,9 @@ import bpy
 
 from bpy.types import Context, Operator
 
-from ..logger import LOGGER
-from ..utils.cuda import CUDAHelper
+from ..dev.cuda import CUDAHelper
 from ..utils.blend_data.operators import process_operator
+from ..logger import LOGGER
 
 
 @process_operator
@@ -14,6 +14,7 @@ class SOAP_OT_CudaTorch(Operator):
     bl_idname = "soap.cudatorch"
     bl_label = "Install CUDA PyTorch for GPU computation"
     bl_description = "Replace current PyTorch installation with a CUDA-enabled one. This may take a few minutes."
+    bl_options = {"INTERNAL"}
 
     @classmethod
     def poll(cls, context: Context) -> bool:

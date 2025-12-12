@@ -83,9 +83,7 @@ class SOAP_OT_Interpolate(Operator):
         self.new_obj = new_obj
         self.src_obj = src_obj
         self.src_V, _ = BlendTorch.mesh2tensor(new_obj, device=device)
-        self.src_mean = self.src_V.mean(dim=0).unsqueeze(0)
         self.tgt_V, _ = BlendTorch.mesh2tensor(tgt_obj, device=device)
-        self.tgt_mean = self.tgt_V.mean(dim=0).unsqueeze(0)
         if settings.fixed_verts.group == "NONE":
             self.fixed_idx = torch.tensor([], device=device, dtype=torch.long)
         else:
@@ -97,10 +95,12 @@ class SOAP_OT_Interpolate(Operator):
         self.W = settings.weights_map.get_field(new_obj, device).unsqueeze(1)
 
     def process(self) -> torch.Tensor:
+        src_mean = self.src_V.mean(dim=0).unsqueeze(0)
+        tgt_mean = self.tgt_V.mean(dim=0).unsqueeze(0)
         new_V = (
-            self.W * (self.tgt_V - self.tgt_mean)
-            + (1 - self.W) * (self.src_V - self.src_mean)
-            + self.src_mean
+            self.W * (self.tgt_V - tgt_mean)
+            + (1 - self.W) * (self.src_V - src_mean)
+            + src_mean
         )
         new_V[self.fixed_idx] = self.src_V[self.fixed_idx]
         return new_V

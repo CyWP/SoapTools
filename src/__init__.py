@@ -1,3 +1,9 @@
+from .dev import deps
+
+# ONLY USED FOR DEV, IGNORED BY BUILT RELEASES
+if not deps.check_deps():
+    deps.install_deps_dev()
+
 import bpy
 
 from bpy.props import PointerProperty

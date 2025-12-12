@@ -30,8 +30,6 @@ class VIEW3D_PT_NPanel(Panel):
     def draw(self, context: Context):
         settings = context.scene.soap_settings
         layout = self.layout
-        if bpy.ops.soap.cudatorch.poll():
-            layout.operator("soap.cudatorch", text="Install CUDA PyTorch")
         settings.device.draw(layout)
 
 

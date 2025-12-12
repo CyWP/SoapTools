@@ -2,14 +2,10 @@ schema_version = "1.0.0"
 id = "soap_tools"
 version = "0.0.1"
 name = "SoapTools"
-tagline = "Computational design tools for Blender."
+tagline = "Computational design tools for Blender"
 maintainer = "Thomas Wolfgang Peschlow <thomas.p24@live.com>"
 type = "add-on"
 tags = ["Modeling"]
 blender_version_min = "4.2.0"
 license = ["SPDX:GPL-3.0-or-later"]
-
-dependencies = [
-    { module = "torch==2.6.0" },
-    { module = "scipy==1.16.2" }
-]
+platforms = ["linux-x64", "windows-x64", "macos-arm64"]

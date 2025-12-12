@@ -13,20 +13,20 @@ class SolverSettings(PropertyGroup):
         name="Solver",
         description="Solver used for linear system.",
         items=lambda self, context: self.get_solver_options(),
-    )  # type: ignore
+    )
 
     precond: EnumProperty(
         name="Precond",
         description="Preconditionning for linear system solver.",
         items=lambda self, context: self.get_precond_options(),
-    )  # type: ignore
+    )
 
     iters: IntProperty(
         name="Iterations",
         description="Solver iterations.",
         default=100,
         min=1,
-    )  # type: ignore
+    )
 
     tolerance: FloatProperty(
         name="Tolerance",
@@ -34,7 +34,7 @@ class SolverSettings(PropertyGroup):
         default=1e-6,
         precision=6,
         min=1e-6,
-    )  # type: ignore
+    )
 
     def get_solver_options(self) -> List[Tuple]:
         options = [(name, name, "") for name, cls in Solver()._solver_classes.items()]

@@ -32,14 +32,14 @@ class ImageSettings(PropertyGroup):
         name="Source",
         items=IMG_SRC,
         description="Source of image to load",
-    )  # type:ignore
-    internal_img: PointerProperty(type=Image)  # type:ignore
+    )
+    internal_img: PointerProperty(type=Image)
     path: bpy.props.StringProperty(
         name="Path",
         description="External source for loading image.",
         subtype="FILE_PATH",
-    )  # type:ignore
-    bake: PointerProperty(type=BakingSettings)  # type:ignore
+    )
+    bake: PointerProperty(type=BakingSettings)
 
     def draw(self, layout):
         row = layout.row()
@@ -82,18 +82,18 @@ class ImageSettings(PropertyGroup):
 
 class ImageMappingSettings(PropertyGroup):
 
-    img: PointerProperty(type=ImageSettings)  # type:ignore
+    img: PointerProperty(type=ImageSettings)
     uv_map: EnumProperty(
         name="UV Map",
         items=BlendEnums.uv_maps,
         description="UV Map to use for mapping image.",
-    )  # type:ignore
+    )
     channel: EnumProperty(
         name="Channel",
         items=IMG_CHANNELS,
         description="Channel to map to vertex group.",
         default="BWA",
-    )  # type:ignore
+    )
 
     def draw(self, layout):
         box = layout.box()

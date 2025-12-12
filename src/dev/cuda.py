@@ -5,7 +5,7 @@ import sys
 
 from typing import Tuple, Optional
 
-from .singleton import Singleton
+from ..utils.singleton import Singleton
 from ..logger import LOGGER
 
 CUDA_WHEEL_MAP = {
@@ -17,20 +17,29 @@ CUDA_WHEEL_MAP = {
 
 class CUDAHelper(Singleton):
 
-    def initialize(self, cuda_min: Tuple[int] = (11, 8)):
+    def initialize(
+        self,
+        torch_version: Optional[Tuple[int]] = None,
+        cuda_min: Tuple[int] = (11, 8),
+    ):
         self.cuda_min = cuda_min
-        self.torch_version = self.get_torch_version()
+        self.torch_version = (
+            self.get_torch_version() if torch_version == None else torch_version
+        )
         if self.torch_version is None:
-            raise EnvironmentError("No pytorch installation detected.")
+            raise EnvironmentError(
+                "No PyTorch installation detected and no installation version was specified."
+            )
         self.cuda_version = self.detect_cuda_version()
-        self.torch_cpu = not self.has_torch_cuda
+        self.torch_cpu = not self.has_torch_cuda()
         self.cuda_valid = self.has_valid_cuda()
 
     def upgrade_eligible(self) -> bool:
-        return self.torch_cpu and self.cuda_valid
+        is_eligible = self.torch_cpu and self.cuda_valid
+        LOGGER.debug(f"Is eligible for upgrade to CUDA: {is_eligible}.")
+        return is_eligible
 
     def detect_cuda_version(self) -> Optional[Tuple[int]]:
-        """Return CUDA version tuple (major, minor) or None."""
         try:
             out = subprocess.check_output(["nvidia-smi"], text=True)
             match = re.search(r"CUDA Version:\s+(\d+)\.(\d+)", out)
@@ -43,10 +52,6 @@ class CUDAHelper(Singleton):
             return None
 
     def get_torch_version(self) -> Optional[Tuple[int, int, int]]:
-        """
-        Return the installed PyTorch version as a tuple of integers (major, minor, patch),
-        or None if PyTorch is not installed.
-        """
         if importlib.util.find_spec("torch") is None:
             return None
 
@@ -55,15 +60,14 @@ class CUDAHelper(Singleton):
 
             version_str = torch.__version__.split("+")[0]
             parts = version_str.split(".")
-            return tuple(int(p) for p in parts[:3])
+            version = tuple(int(p) for p in parts[:3])
+            LOGGER.debug(f"Detected torch version: {version}.")
+            return version
         except Exception:
+            LOGGER.debug("No torch installation detected.")
             return None
 
     def has_valid_cuda(self) -> bool:
-        """
-        Check if the system has CUDA installed (NVIDIA driver + toolkit) via nvidia-smi.
-        Returns (major, minor) version if found, else None.
-        """
         version = self.detect_cuda_version()
         if version is None:
             return False
@@ -77,10 +81,6 @@ class CUDAHelper(Singleton):
         return True
 
     def has_torch_cuda(self) -> bool:
-        """
-        Check whether the currently installed PyTorch has CUDA support.
-        Returns True if torch is installed and compiled with CUDA, False otherwise.
-        """
         if importlib.util.find_spec("torch") is None:
             LOGGER.debug("PyTorch is not installed")
             return False
@@ -101,7 +101,6 @@ class CUDAHelper(Singleton):
             return False
 
     def pick_best_cuda_repo(self) -> Optional[str]:
-        """Choose the nearest compatible CUDA repo for PyTorch."""
         if self.cuda_version is None:
             return None
 

@@ -15,22 +15,22 @@ from .device import TorchDevice
 
 
 class MinSrfSettings(PropertyGroup):
-    solver: PointerProperty(type=SolverSettings)  # type:ignore
+    solver: PointerProperty(type=SolverSettings)
     apply_after: EnumProperty(
         name="Apply after",
         description="Applies modifier and all prior ones in stack before transforming, preserves ones after.",
         items=BlendEnums.modifiers,
-    )  # type:ignore
-    fixed_verts: PointerProperty(type=SimpleVertexGroup)  # type: ignore
+    )
+    fixed_verts: PointerProperty(type=SimpleVertexGroup)
 
 
 class FlationSettings(PropertyGroup):
-    solver: PointerProperty(type=SolverSettings)  # type: ignore
+    solver: PointerProperty(type=SolverSettings)
     apply_after: EnumProperty(
         name="Apply after",
         description="Applies modifier and all prior ones in stack before transforming, preserves ones after.",
         items=BlendEnums.modifiers,
-    )  # type:ignore
+    )
     active_constraint: EnumProperty(
         name="Constraint",
         description="Constraint to be currently edited",
@@ -40,41 +40,33 @@ class FlationSettings(PropertyGroup):
             ("ALPHA", "Normal", ""),
             ("BETA", "Tangent", ""),
         ],
-    )  # type:ignore
-    fixed_verts: PointerProperty(type=SimpleVertexGroup)  # type: ignore
-    displacement: PointerProperty(type=ScalarVertexMapSettings)  # type:ignore
-    laplacian: PointerProperty(type=ScalarVertexMapSettings)  # type:ignore
-    alpha: PointerProperty(type=ScalarVertexMapSettings)  # type:ignore
-    beta: PointerProperty(type=ScalarVertexMapSettings)  # type:ignore
+    )
+    fixed_verts: PointerProperty(type=SimpleVertexGroup)
+    displacement: PointerProperty(type=ScalarVertexMapSettings)
+    laplacian: PointerProperty(type=ScalarVertexMapSettings)
+    alpha: PointerProperty(type=ScalarVertexMapSettings)
+    beta: PointerProperty(type=ScalarVertexMapSettings)
 
 
 class SoftenVertexGroupSettings(PropertyGroup):
-    group: EnumProperty(
-        name="Vertex Group", items=BlendEnums.vertex_groups
-    )  # type:ignore
+    group: EnumProperty(name="Vertex Group", items=BlendEnums.vertex_groups)
     rings: IntProperty(
         name="Rings", description="Topologoical smoothing distance", min=1, default=5
-    )  # type:ignore
-    copy: BoolProperty(
-        name="Copy", description="Apply to copy", default=True
-    )  # type:ignore
+    )
+    copy: BoolProperty(name="Copy", description="Apply to copy", default=True)
     direction: EnumProperty(
         name="Direction", items=[("IN", "Inwards", ""), ("OUT", "Outwards", "")]
-    )  # type:ignore
+    )
 
 
 class HardenVertexGroupSettings(PropertyGroup):
-    group: EnumProperty(
-        name="Vertex Group", items=BlendEnums.vertex_groups
-    )  # type:ignore
-    copy: BoolProperty(
-        name="Copy", description="Apply to copy", default=True
-    )  # type:ignore
+    group: EnumProperty(name="Vertex Group", items=BlendEnums.vertex_groups)
+    copy: BoolProperty(name="Copy", description="Apply to copy", default=True)
 
 
 class RemapVertexGroupSettings(PropertyGroup):
-    remap: PointerProperty(type=RemappingStack)  # type:ignore
-    group: PointerProperty(type=SimpleVertexGroup)  # type:ignore
+    remap: PointerProperty(type=RemappingStack)
+    group: PointerProperty(type=SimpleVertexGroup)
 
 
 class InterpolationSettings(PropertyGroup):
@@ -82,20 +74,20 @@ class InterpolationSettings(PropertyGroup):
         name="Apply after",
         description="Applies modifier and all prior ones in stack before transforming, preserves ones after.",
         items=BlendEnums.modifiers,
-    )  # type:ignore
-    fixed_verts: PointerProperty(type=SimpleVertexGroup)  # type: ignore
-    weights_map: PointerProperty(type=ScalarVertexMapSettings)  # type:ignore
-    target: PointerProperty(type=Object)  # type: ignore
+    )
+    fixed_verts: PointerProperty(type=SimpleVertexGroup)
+    weights_map: PointerProperty(type=ScalarVertexMapSettings)
+    target: PointerProperty(type=Object)
 
 
 class GlobalSettings(PropertyGroup):
-    device: PointerProperty(type=TorchDevice)  # type: ignore
-    minsrf: PointerProperty(type=MinSrfSettings)  # type: ignore
-    flation: PointerProperty(type=FlationSettings)  # type: ignore
-    vghard: PointerProperty(type=HardenVertexGroupSettings)  # type:ignore
-    vgsoft: PointerProperty(type=SoftenVertexGroupSettings)  # type:ignore
-    bake: PointerProperty(type=BakingSettings)  # type:ignore
-    imgmap: PointerProperty(type=ImageMappingSettings)  # type:ignore
-    vgremap: PointerProperty(type=RemapVertexGroupSettings)  # type:ignore
-    mapops: PointerProperty(type=MapOperationSettings)  # type:ignore
-    lerp: PointerProperty(type=InterpolationSettings)  # type:ignore
+    device: PointerProperty(type=TorchDevice)
+    minsrf: PointerProperty(type=MinSrfSettings)
+    flation: PointerProperty(type=FlationSettings)
+    vghard: PointerProperty(type=HardenVertexGroupSettings)
+    vgsoft: PointerProperty(type=SoftenVertexGroupSettings)
+    bake: PointerProperty(type=BakingSettings)
+    imgmap: PointerProperty(type=ImageMappingSettings)
+    vgremap: PointerProperty(type=RemapVertexGroupSettings)
+    mapops: PointerProperty(type=MapOperationSettings)
+    lerp: PointerProperty(type=InterpolationSettings)

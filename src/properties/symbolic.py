@@ -13,7 +13,7 @@ class SymbolicExpression(PropertyGroup):
         name="Expression",
         description="Mathematical expression used for mapping",
         default="",
-    )  # type:ignore
+    )
 
     def eval(
         self, vars: Dict[str, Union[float, torch.Tensor]], tensor: bool = True

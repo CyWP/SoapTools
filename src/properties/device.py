@@ -24,7 +24,7 @@ class TorchDevice(PropertyGroup):
         description="Compute device used for torch operations",
         items=lambda self, context: get_torch_devices(),
         default=0,
-    )  # type: ignore
+    )
 
     def has_options(self) -> bool:
         return len(get_torch_devices()) > 1
