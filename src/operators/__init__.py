@@ -10,3 +10,4 @@ from .mapops import SOAP_OT_OperateMaps
 from .lerp import SOAP_OT_Interpolate
 from .changedevice import SOAP_OT_ChangeDevice
 from .cudatorch import SOAP_OT_CudaTorch
+from .vgtransfer import SOAP_OT_TransferVGroup

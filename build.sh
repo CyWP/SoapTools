@@ -32,9 +32,9 @@ curl -O https://download.pytorch.org/whl/cpu/torch-2.6.0%2Bcpu-cp311-cp311-linux
 curl -O https://download.pytorch.org/whl/cpu/torch-2.6.0%2Bcpu-cp311-cp311-win_amd64.whl
 curl -O https://download.pytorch.org/whl/cpu/torch-2.6.0-cp311-none-macosx_11_0_arm64.whl
 # SciPy wheels
-pip download scipy --only-binary=:all: --platform manylinux_2_17_x86_64 --python-version 3.11 --implementation cp
-pip download scipy --only-binary=:all: --platform win_amd64 --python-version 3.11 --implementation cp
-pip download scipy --only-binary=:all: --platform macosx_14_0_arm64 --python-version 3.11 --implementation cp
+pip download scipy==1.16.3 --only-binary=:all: --platform manylinux_2_17_x86_64 --python-version 3.11 --implementation cp
+pip download scipy==1.16.3 --only-binary=:all: --platform win_amd64 --python-version 3.11 --implementation cp
+pip download scipy==1.16.3 --only-binary=:all: --platform macosx_14_0_arm64 --python-version 3.11 --implementation cp
 
 echo "Appending wheels list to manifest..."
 # Build TOML list directly

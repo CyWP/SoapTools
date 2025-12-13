@@ -6,6 +6,7 @@ from bpy.types import PropertyGroup, Object
 
 from .baking import BakingSettings
 from .img import ImageMappingSettings
+from .lerp import InterpolationSettings
 from .map_ops import MapOperationSettings
 from .solver import SolverSettings
 from .svm import ScalarVertexMapSettings, RemappingStack
@@ -19,7 +20,7 @@ class MinSrfSettings(PropertyGroup):
     apply_after: EnumProperty(
         name="Apply after",
         description="Applies modifier and all prior ones in stack before transforming, preserves ones after.",
-        items=BlendEnums.modifiers,
+        items=lambda self, context: BlendEnums.modifiers(self, context),
     )
     fixed_verts: PointerProperty(type=SimpleVertexGroup)
 
@@ -29,7 +30,7 @@ class FlationSettings(PropertyGroup):
     apply_after: EnumProperty(
         name="Apply after",
         description="Applies modifier and all prior ones in stack before transforming, preserves ones after.",
-        items=BlendEnums.modifiers,
+        items=lambda self, context: BlendEnums.modifiers(self, context),
     )
     active_constraint: EnumProperty(
         name="Constraint",
@@ -49,7 +50,10 @@ class FlationSettings(PropertyGroup):
 
 
 class SoftenVertexGroupSettings(PropertyGroup):
-    group: EnumProperty(name="Vertex Group", items=BlendEnums.vertex_groups)
+    group: EnumProperty(
+        name="Vertex Group",
+        items=lambda self, context: BlendEnums.vertex_groups(self, context),
+    )
     rings: IntProperty(
         name="Rings", description="Topologoical smoothing distance", min=1, default=5
     )
@@ -60,7 +64,10 @@ class SoftenVertexGroupSettings(PropertyGroup):
 
 
 class HardenVertexGroupSettings(PropertyGroup):
-    group: EnumProperty(name="Vertex Group", items=BlendEnums.vertex_groups)
+    group: EnumProperty(
+        name="Vertex Group",
+        items=lambda self, context: BlendEnums.vertex_groups(self, context),
+    )
     copy: BoolProperty(name="Copy", description="Apply to copy", default=True)
 
 
@@ -69,15 +76,14 @@ class RemapVertexGroupSettings(PropertyGroup):
     group: PointerProperty(type=SimpleVertexGroup)
 
 
-class InterpolationSettings(PropertyGroup):
+class TransferVertexGroupSettings(PropertyGroup):
+    target: PointerProperty(type=Object)
+    group: PointerProperty(type=SimpleVertexGroup)
     apply_after: EnumProperty(
         name="Apply after",
         description="Applies modifier and all prior ones in stack before transforming, preserves ones after.",
-        items=BlendEnums.modifiers,
+        items=lambda self, context: BlendEnums.modifiers(self, context),
     )
-    fixed_verts: PointerProperty(type=SimpleVertexGroup)
-    weights_map: PointerProperty(type=ScalarVertexMapSettings)
-    target: PointerProperty(type=Object)
 
 
 class GlobalSettings(PropertyGroup):
@@ -86,8 +92,9 @@ class GlobalSettings(PropertyGroup):
     flation: PointerProperty(type=FlationSettings)
     vghard: PointerProperty(type=HardenVertexGroupSettings)
     vgsoft: PointerProperty(type=SoftenVertexGroupSettings)
+    vgtransfer: PointerProperty(type=TransferVertexGroupSettings)
+    vgremap: PointerProperty(type=RemapVertexGroupSettings)
     bake: PointerProperty(type=BakingSettings)
     imgmap: PointerProperty(type=ImageMappingSettings)
-    vgremap: PointerProperty(type=RemapVertexGroupSettings)
     mapops: PointerProperty(type=MapOperationSettings)
     lerp: PointerProperty(type=InterpolationSettings)

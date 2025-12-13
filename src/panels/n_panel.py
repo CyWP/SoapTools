@@ -13,6 +13,7 @@ MAP_OPERATORS = {
     "soap.img2vg": "Image to Vertex Group",
     "soap.vghard": "Harden Vertex Group",
     "soap.vgsoft": "Soften Vertex Group",
+    "soap.vgtransfer": "Transfer Vertex Group",
     "soap.vgremap": "Remap Vertex Group",
     "soap.op_maps": "Map Operations",
 }

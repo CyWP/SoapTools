@@ -16,7 +16,7 @@ from ..utils.blend_data.vertex_groups import harden_vertex_group
 class SimpleVertexGroup(PropertyGroup):
     group: EnumProperty(
         name="Vertex group",
-        items=BlendEnums.vertex_groups,
+        items=lambda self, context: BlendEnums.vertex_groups(self, context),
         default=0,
     )
     strict: BoolProperty(

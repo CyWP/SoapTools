@@ -2,7 +2,7 @@ import bpy
 import numpy as np
 import torch
 
-from bpy.types import Object, Image
+from bpy.types import Object, Image, Mesh
 from itertools import chain
 from typing import Tuple, List, Union, Optional, Any
 
@@ -12,12 +12,11 @@ from ..img import ImageTensor
 class BlendTorch:
 
     @staticmethod
-    def tensor2mesh(V: torch.Tensor, F: torch.Tensor, name="TensorMesh"):
+    def tensor2mesh(V: torch.Tensor, F: torch.Tensor, name="TensorMesh") -> Mesh:
         """
         Convert PyTorch tensors V (N,3) and F (M,3) into a Blender mesh
         using foreach_set for maximum speed.
         """
-        # ---- ensure CPU + NumPy ----
         if V.is_cuda:
             V = V.cpu()
         if F.is_cuda:
@@ -26,30 +25,24 @@ class BlendTorch:
         V_np = V.detach().contiguous().numpy()
         F_np = F.detach().contiguous().numpy()
 
-        # Ensure correct dtypes
         V_np = V_np.astype(np.float32)
         F_np = F_np.astype(np.int32)
 
-        # ---- Create empty mesh ----
         mesh = bpy.data.meshes.new(name)
         mesh.vertices.add(len(V_np))
         mesh.loops.add(len(F_np) * 3)
         mesh.polygons.add(len(F_np))
 
-        # ---- Assign vertices ----
         mesh.vertices.foreach_set("co", V_np.ravel())
 
-        # ---- Assign loop vertex indices ----
         mesh.loops.foreach_set("vertex_index", F_np.ravel())
 
-        # ---- Assign polygon sizes and loop start indices ----
         loop_starts = np.arange(0, len(F_np) * 3, 3, dtype=np.int32)
         sizes = np.full(len(F_np), 3, dtype=np.int32)
 
         mesh.polygons.foreach_set("loop_start", loop_starts)
         mesh.polygons.foreach_set("loop_total", sizes)
 
-        # ---- Finalize ----
         mesh.update()
         return mesh
 

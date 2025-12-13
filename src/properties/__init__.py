@@ -6,23 +6,30 @@ from .settings import (
     SoftenVertexGroupSettings,
     InterpolationSettings,
     HardenVertexGroupSettings,
+    TransferVertexGroupSettings,
 )
 from .svm import (
     ScalarVertexMapSettings,
     RemappingMode,
     RemappingStack,
-    REMAP_UL_ModeList,
-    REMAP_OT_AddModeOperator,
-    REMAP_OT_RemoveModeOperator,
+    SOAP_UL_ModeList,
+    SOAP_OT_AddModeOperator,
+    SOAP_OT_RemoveModeOperator,
 )
 from .v_group import SimpleVertexGroup
 from .solver import SolverSettings
 from .baking import BakingSettings
 from .map_ops import (
     MapOperationSettings,
-    OPMAP_OT_AddMapVariable,
-    OPMAP_OT_RemoveMapVariable,
+    SOAP_OT_AddMapVariable,
+    SOAP_OT_RemoveMapVariable,
 )
 from .symbolic import SymbolicExpression
 from .img import ImageSettings, ImageMappingSettings
 from .device import TorchDevice
+from .lerp import (
+    InterpolationTarget,
+    InterpolationSettings,
+    SOAP_OT_AddInterpolationVariable,
+    SOAP_OT_RemoveInterpolationVariable,
+)

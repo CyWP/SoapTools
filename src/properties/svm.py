@@ -165,7 +165,7 @@ class RemappingStack(PropertyGroup):
     def draw(self, layout, compact: bool = True):
         if len(self.modes) > 0 or not compact:
             layout.template_list(
-                "REMAP_UL_ModeList", "", self, "modes", self, "active_index", rows=3
+                "SOAP_UL_ModeList", "", self, "modes", self, "active_index", rows=3
             )
             op = layout.operator(
                 "soap.add_mode_operator", text="Add Function", icon="PLUS"
@@ -181,7 +181,7 @@ class RemappingStack(PropertyGroup):
         return x
 
 
-class REMAP_UL_ModeList(UIList):
+class SOAP_UL_ModeList(UIList):
     bl_options = {"DEFAULT", "FILTER"}
 
     def draw_filter(self, context, layout):
@@ -198,7 +198,7 @@ class REMAP_UL_ModeList(UIList):
             op.idx = index
 
 
-class REMAP_OT_AddModeOperator(Operator):
+class SOAP_OT_AddModeOperator(Operator):
     bl_idname = "soap.add_mode_operator"
     bl_label = "Add Mode"
     bl_description = "Add remapping function to the vertex groups values [0, 1] before applying range or weights."
@@ -212,7 +212,7 @@ class REMAP_OT_AddModeOperator(Operator):
         return {"FINISHED"}
 
 
-class REMAP_OT_RemoveModeOperator(Operator):
+class SOAP_OT_RemoveModeOperator(Operator):
     bl_idname = "soap.remove_mode_operator"
     bl_label = "Remove Mode"
     bl_options = {"INTERNAL"}
@@ -237,12 +237,25 @@ class ScalarVertexMapSettings(PropertyGroup):
         ],
         default="VALUE",
     )
+    target_obj: PointerProperty(type=Object)
+    apply_after: EnumProperty(
+        name="Apply after",
+        description="Applies modifier and all prior ones in stack before transforming, preserves ones after.",
+        items=lambda self, context: BlendEnums.modifiers(
+            self, context, object=self.target_obj, use_active=False
+        ),
+    )
+    use_active: BoolProperty(
+        name="Use Active", description="use active object for reference", default=True
+    )
     val: FloatProperty(name="", description="Value", default=1)
     r_0: FloatProperty(name="", description="Start of mapping range", default=0)
     r_1: FloatProperty(name="", description="End of mapping range", default=1)
     group: EnumProperty(
         name="Vertex group",
-        items=BlendEnums.vertex_groups,
+        items=lambda self, context: BlendEnums.vertex_groups(
+            self, context, object=self.target_obj, use_active=self.use_active
+        ),
         default=0,
     )
     strict: BoolProperty(

@@ -53,6 +53,8 @@ def apply_first_n_modifiers(
     strict_vgs keep their initial sharpness using a
     custom 'strict' subdivision that preserves vertex groups on original vertices only.
     """
+    if strict_vgs is None:
+        strict_vgs = []
     if obj.type != "MESH":
         raise ValueError("Object must be a mesh")
 

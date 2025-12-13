@@ -87,7 +87,7 @@ class MapOperationSettings(PropertyGroup):
             return (x - x_min) / (x_max - x_min)
 
 
-class OPMAP_OT_AddMapVariable(Operator):
+class SOAP_OT_AddMapVariable(Operator):
     bl_idname = "soap.add_map_var"
     bl_label = "Add Variable"
     bl_description = "Add variable to remapping function"
@@ -101,7 +101,7 @@ class OPMAP_OT_AddMapVariable(Operator):
         return {"FINISHED"}
 
 
-class OPMAP_OT_RemoveMapVariable(Operator):
+class SOAP_OT_RemoveMapVariable(Operator):
     bl_idname = "soap.remove_map_var"
     bl_label = "Remove Variable"
     bl_description = "Remove variable from remapping function"
