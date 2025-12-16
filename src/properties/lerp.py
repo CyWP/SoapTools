@@ -45,7 +45,6 @@ class InterpolationTarget(PropertyGroup):
         with temp_copy(target, apply_after=apply_after) as tmp_obj:
             V, F = BlendTorch.mesh2tensor(tmp_obj, device=device)
             W = self.weights_map.get_field(tmp_obj, device).unsqueeze(1)
-        print(f"Reference: {reference}")
         if reference is not None:
             V = V - reference
         return W * V, F
